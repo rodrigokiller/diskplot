@@ -10,4 +10,14 @@
     <xhtml:link rel="alternate" hreflang="en" href="https://diskplot.vercel.app/" />
     <xhtml:link rel="alternate" hreflang="pt-BR" href="https://diskplot.vercel.app/pt/" />
   </url>
+  <url>
+    <loc>https://diskplot.vercel.app/download/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://diskplot.vercel.app/" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://diskplot.vercel.app/pt/" />
+  </url>
+  <url>
+    <loc>https://diskplot.vercel.app/pt/download/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://diskplot.vercel.app/" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://diskplot.vercel.app/pt/" />
+  </url>
 </urlset>

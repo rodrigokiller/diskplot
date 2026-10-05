@@ -22,7 +22,7 @@
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="preload" href="../fonts/barlow-semi-condensed-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="../style.css" />
-    <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Diskplot","description":"Analisador de espaço em disco para Windows que mostra um treemap e uma árvore ordenável lado a lado.","applicationCategory":"UtilitiesApplication","operatingSystem":"Windows 10, Windows 11","url":"https://diskplot.vercel.app/pt/","downloadUrl":"https://github.com/rodrigokiller/diskplot/releases/latest","license":"https://opensource.org/license/mit","isAccessibleForFree":true,"inLanguage":"pt-BR","author":{"@type":"Person","name":"Rodrigo Sanguanini","url":"https://sanguanini.dev"},"offers":{"@type":"Offer","price":"0","priceCurrency":"BRL"}}</script>
+    <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Diskplot","description":"Analisador de espaço em disco para Windows que mostra um treemap e uma árvore ordenável lado a lado.","applicationCategory":"UtilitiesApplication","operatingSystem":"Windows 10, Windows 11","url":"https://diskplot.vercel.app/pt/","downloadUrl":"https://diskplot.vercel.app/pt/download/","license":"https://opensource.org/license/mit","isAccessibleForFree":true,"inLanguage":"pt-BR","author":{"@type":"Person","name":"Rodrigo Sanguanini","url":"https://sanguanini.dev"},"offers":{"@type":"Offer","price":"0","priceCurrency":"BRL"}}</script>
     <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"É grátis?","acceptedAnswer":{"@type":"Answer","text":"Sim. O Diskplot usa a licença MIT e pode ser usado em casa e no trabalho sem custo."}},{"@type":"Question","name":"Precisa de permissão de administrador?","acceptedAnswer":{"@type":"Answer","text":"Não. Ele escaneia tudo o que a conta atual consegue ler. As pastas que não consegue abrir são contadas e listadas. Execute como administrador para incluí-las."}},{"@type":"Question","name":"Por que os tamanhos são diferentes dos do Explorador de Arquivos?","acceptedAnswer":{"@type":"Answer","text":"O Diskplot mostra o espaço alocado no disco. Arquivos compactados, esparsos e arquivos do OneDrive que estão só online ocupam menos do que o tamanho indica. Um arquivo com vários hard links é contado uma vez por nome."}},{"@type":"Question","name":"Ele envia dados para algum lugar?","acceptedAnswer":{"@type":"Answer","text":"Não. O único acesso à rede é ao GitHub, para verificar se existe uma versão mais nova."}},{"@type":"Question","name":"Tem versão para macOS ou Linux?","acceptedAnswer":{"@type":"Answer","text":"Ainda não. Os sistemas suportados são Windows 10 e 11."}}]}</script>
   </head>
   <body>
@@ -44,9 +44,9 @@
           <a href="#speed">Velocidade</a>
           <a href="#compare">Comparado</a>
           <a href="#faq">Perguntas</a>
-          <a href="../" lang="en" hreflang="en">English</a>
         </nav>
-        <a class="btn small" href="https://github.com/rodrigokiller/diskplot/releases/latest">Baixar</a>
+        <div class="lang" role="group" aria-label="Language"><a href="../" lang="en" hreflang="en" title="English">EN</a><span aria-current="true" title="Português">PT</span></div>
+        <a class="btn small" href="download/">Baixar</a>
       </div>
     </header>
 
@@ -58,7 +58,7 @@
             <div>
               <p>O Diskplot escaneia uma unidade ou uma pasta e mostra o que está ocupando o espaço, em um treemap e em uma árvore ordenável na mesma janela.</p>
               <div class="cta">
-                <a class="btn" href="https://github.com/rodrigokiller/diskplot/releases/latest">
+                <a class="btn" href="download/">
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true">
                     <path d="M8 2v8M4.5 7 8 10.5 11.5 7M2.5 13.5h11" />
                   </svg>
@@ -239,7 +239,7 @@
           <p>Instalador e versão portátil para Windows 10 e 11.</p>
         </div>
         <div class="cta">
-          <a class="btn" href="https://github.com/rodrigokiller/diskplot/releases/latest">Baixar para Windows</a>
+          <a class="btn" href="download/">Baixar para Windows</a>
           <a class="btn line" href="https://github.com/rodrigokiller/diskplot">Código no GitHub</a>
         </div>
       </div>
@@ -251,7 +251,6 @@
         <a href="https://github.com/rodrigokiller/diskplot/issues">Relatar um problema</a>
         <a href="https://github.com/rodrigokiller/diskplot/releases">Notas de versão</a>
         <span>Feito por <a href="https://sanguanini.dev">Rodrigo Sanguanini</a></span>
-        <a href="../" lang="en" hreflang="en">English</a>
       </div>
     </footer>
 
