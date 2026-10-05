@@ -87,7 +87,7 @@ export function App() {
     }
   });
   const [planArea, setPlanArea] = useState(0);
-  const [levels, setLevels] = useState(() => Number(load("levels", ["2", "3", "4", "5", "6", "0"] as const, "3")));
+  const [levels, setLevels] = useState(() => Number(load("levels", ["2", "3", "4", "5", "6", "0"] as const, "2")));
   // Where the plan has been, for Back and Forward.
   const [trail, setTrail] = useState<{ back: number[]; forward: number[] }>({ back: [], forward: [] });
 
