@@ -12,6 +12,8 @@ const paths: Record<string, ReactNode> = {
     </>
   ),
   chevron: <path d="M6 3.5 10.5 8 6 12.5" />,
+  back: <path d="M9.5 3.5 5 8l4.5 4.5M5 8h8.5" />,
+  forward: <path d="M6.5 3.5 11 8l-4.5 4.5M11 8H2.5" />,
   scan: (
     <>
       <path d="M1.75 5.5V1.75H5.5M10.5 1.75h3.75V5.5M14.25 10.5v3.75H10.5M5.5 14.25H1.75V10.5" />
@@ -57,13 +59,16 @@ export function Icon({ name, size = 16, className }: { name: IconName; size?: nu
   );
 }
 
-// The mark: a square plot, partitioned, with one room filled in.
+// The mark: a treemap in miniature. Each block is half the one before it and
+// the ink runs from strong to weak, so it follows the theme.
 export function Mark({ size = 18 }: { size?: number }) {
   return (
     <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
-      <path d="M6 6h8v20H6z" fill="var(--t4)" />
-      <path d="M0 0h32v32H0zM4 4v24h24V4z" fill="currentColor" fillRule="evenodd" />
-      <path d="M16 4h3v24h-3zM19 14.5h9v3h-9z" fill="currentColor" />
+      <path d="M2 2h13v28H2z" fill="var(--t5)" />
+      <path d="M17 2h13v13H17z" fill="var(--t4)" />
+      <path d="M17 17h6v13h-6z" fill="var(--t3)" />
+      <path d="M25 17h5v6h-5z" fill="var(--t2)" />
+      <path d="M25 25h5v5h-5z" fill="var(--t2)" opacity="0.6" />
     </svg>
   );
 }

@@ -2,7 +2,7 @@ import { memo, useEffect, useLayoutEffect, useMemo, useRef, useState } from "rea
 import type { Disk } from "../lib/disk";
 import type { Comparison } from "../lib/analysis";
 import type { Fmt, T } from "../lib/i18n";
-import { HEADER, K_DIR, K_DIR_LABELLED, K_FILE, K_REST, findRect, hitTest, layoutTreemap } from "../lib/treemap";
+import { HEADER, K_DIR, K_DIR_LABELLED, K_FILE, K_PACK, K_REST, findRect, hitTest, layoutTreemap } from "../lib/treemap";
 import type { Layout } from "../lib/treemap";
 
 const FONT = '12px "Barlow", "Bahnschrift", "Segoe UI", sans-serif';
@@ -107,10 +107,16 @@ function drawPlan(
       continue;
     }
 
-    if (kind === K_FILE) {
+    if (kind === K_FILE || kind === K_PACK) {
       const tn = tone(disk.size(id) / total);
       ctx.fillStyle = c.tones[tn];
       ctx.fillRect(x0, y0, Math.max(1, w - 1), Math.max(1, h - 1));
+      // A closed folder keeps a wall, so it does not pass for one big file.
+      if (kind === K_PACK && w > 4 && h > 4) {
+        ctx.strokeStyle = c.ink;
+        ctx.lineWidth = 1;
+        ctx.strokeRect(x0 + 0.5, y0 + 0.5, w - 2, h - 2);
+      }
       if (w >= 50 && h >= 17) {
         ctx.fillStyle = tn >= 3 ? c.onStrong : c.onWeak;
         const name = fit(ctx, disk.name(id), w - 10);
@@ -177,6 +183,7 @@ interface Props {
   version: number;
   theme: string;
   zoom: number;
+  levels: number;
   selected: number;
   hover: number;
   comparison: Comparison | null;
@@ -213,9 +220,9 @@ export const Treemap = memo(function Treemap(p: Props) {
   }, []);
 
   const layout = useMemo(
-    () => layoutTreemap(disk, zoom, box.w, box.h),
+    () => layoutTreemap(disk, zoom, box.w, box.h, p.levels),
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [disk, p.version, zoom, box.w, box.h],
+    [disk, p.version, zoom, box.w, box.h, p.levels],
   );
 
   useEffect(() => onArea(box.w * box.h), [box, onArea]);
@@ -344,7 +351,7 @@ export const Treemap = memo(function Treemap(p: Props) {
           const i = at(e);
           if (i < 0) return;
           const id = layout.id[i];
-          const dir = layout.kind[i] === K_FILE ? disk.parent(id) : id;
+          const dir = disk.isDir(id) ? id : disk.parent(id);
           if (dir !== zoom) p.onZoom(dir);
         }}
         onContextMenu={(e) => {

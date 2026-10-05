@@ -76,11 +76,33 @@
   --on-red: oklch(0.985 0.01 28);
   color-scheme: light;
 }
-:root[data-theme="grid"] .sheet {
+:root[data-theme="grid-dark"] {
+  --paper: oklch(0.17 0.012 268);
+  --panel: oklch(0.21 0.016 268);
+  --sunken: oklch(0.14 0.012 268);
+  --ink: oklch(0.95 0.006 268);
+  --ink-2: oklch(0.74 0.02 268);
+  --line: oklch(0.29 0.035 268);
+  --line-strong: oklch(0.45 0.06 268);
+
+  --t1: oklch(0.27 0.05 268);
+  --t2: oklch(0.35 0.09 267);
+  --t3: oklch(0.44 0.14 266);
+  --t4: oklch(0.68 0.13 268);
+  --t5: oklch(0.84 0.075 270);
+  --on-weak: oklch(0.94 0.02 268);
+  --on-strong: oklch(0.17 0.04 268);
+
+  --red: oklch(0.7 0.18 30);
+  --red-weak: oklch(0.3 0.07 28);
+  --on-red: oklch(0.16 0.03 28);
+  color-scheme: dark;
+}
+:root[data-theme^="grid"] .sheet {
   background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
   background-size: 24px 24px;
 }
-:root[data-theme="grid"] .sheet-inner > * {
+:root[data-theme^="grid"] .sheet-inner > * {
   background-color: var(--paper);
 }
 

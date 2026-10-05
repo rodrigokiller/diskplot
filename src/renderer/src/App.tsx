@@ -13,7 +13,16 @@ import { TreeView } from "./components/TreeView";
 import { ChangesPane, ClutterPane, DupesPane, ListPane, TypesPane } from "./components/Panels";
 import type { DupState } from "./components/Panels";
 
-type ThemePref = "system" | "light" | "dark" | "grid";
+type ThemePref = "system" | "light" | "dark" | "grid" | "grid-dark";
+const THEMES = ["system", "light", "dark", "grid", "grid-dark"] as const;
+const THEME_LABEL = {
+  system: "menu.themeSystem",
+  light: "menu.themeLight",
+  dark: "menu.themeDark",
+  grid: "menu.themeGrid",
+  "grid-dark": "menu.themeGridDark",
+} as const;
+const LEVELS = [2, 3, 4, 5, 6, 0] as const; // 0 means every level
 type Tab = "tree" | "largest" | "types" | "clutter" | "dupes" | "changes" | "found";
 type Phase = { is: "start" } | { is: "scanning"; root: string } | { is: "failed"; root: string; error: string } | { is: "ready" };
 
@@ -40,7 +49,7 @@ function save(key: string, value: string): void {
 
 export function App() {
   const [lang, setLang] = useState<Lang>(initialLang);
-  const [themePref, setThemePref] = useState<ThemePref>(() => load("theme", ["system", "light", "dark", "grid"] as const, "system"));
+  const [themePref, setThemePref] = useState<ThemePref>(() => load("theme", THEMES, "system"));
   const [systemDark, setSystemDark] = useState(() => window.matchMedia("(prefers-color-scheme: dark)").matches);
   const theme = themePref === "system" ? (systemDark ? "dark" : "light") : themePref;
   const t = useMemo(() => makeT(lang), [lang]);
@@ -72,6 +81,9 @@ export function App() {
     }
   });
   const [planArea, setPlanArea] = useState(0);
+  const [levels, setLevels] = useState(() => Number(load("levels", ["2", "3", "4", "5", "6", "0"] as const, "4")));
+  // Where the plan has been, for Back and Forward.
+  const [trail, setTrail] = useState<{ back: number[]; forward: number[] }>({ back: [], forward: [] });
 
   const [menu, setMenu] = useState<{ x: number; y: number; items: MenuEntry[]; from?: string } | null>(null);
   const [trash, setTrash] = useState<number[] | null>(null);
@@ -96,7 +108,7 @@ export function App() {
   // A layout effect, so the colours are in place before the plan redraws.
   useLayoutEffect(() => {
     document.documentElement.dataset.theme = theme;
-    void window.api.setOverlay(theme === "dark" ? "#c9d4cf" : "#33403c");
+    void window.api.setOverlay(theme.endsWith("dark") ? "#c9d4cf" : "#33403c");
   }, [theme]);
   useEffect(() => {
     document.documentElement.lang = lang === "pt" ? "pt-BR" : "en";
@@ -160,6 +172,7 @@ export function App() {
         }
       }
       setDisk(d);
+      setTrail({ back: [], forward: [] });
       setVersion(0);
       setZoom(zoom);
       setSelected(selected);
@@ -268,17 +281,37 @@ export function App() {
   );
   const selectInTree = useCallback((id: number) => setSelected(id), []);
 
-  const zoomTo = useCallback(
+  const openAt = useCallback(
     (id: number) => {
-      if (!disk || id < 0 || !disk.isDir(id) || disk.size(id) <= 0) return;
+      if (!disk || id < 0 || !disk.isDir(id) || disk.size(id) <= 0) return false;
       setZoom(id);
       setExpanded((prev) => {
         const next = new Set(prev);
         for (const a of disk.ancestors(id)) next.add(a);
         return next;
       });
+      return true;
     },
     [disk],
+  );
+  const zoomTo = useCallback(
+    (id: number) => {
+      const from = view.current.zoom;
+      if (id !== from && openAt(id)) setTrail((h) => ({ back: [...h.back.slice(-49), from], forward: [] }));
+    },
+    [openAt],
+  );
+  const step = useCallback(
+    (dir: "back" | "forward") => {
+      const stack = trail[dir];
+      if (stack.length === 0) return;
+      const to = stack[stack.length - 1];
+      const from = view.current.zoom;
+      const rest = stack.slice(0, -1);
+      if (!openAt(to)) return;
+      setTrail(dir === "back" ? { back: rest, forward: [...trail.forward, from] } : { back: [...trail.back, from], forward: rest });
+    },
+    [trail, openAt],
   );
 
   const toggle = useCallback((id: number, open?: boolean) => {
@@ -361,11 +394,25 @@ export function App() {
     view: () => [
       { label: t("menu.zoomOut"), icon: "up", keys: "Backspace", disabled: !ready || zoom === 0, run: () => disk && zoomTo(disk.parent(zoom)) },
       { label: t("menu.zoomRoot"), disabled: !ready || zoom === 0, run: () => zoomTo(0) },
+      { label: t("menu.back"), icon: "back", keys: "Alt+Left", disabled: !ready || trail.back.length === 0, run: () => step("back") },
+      { label: t("menu.forward"), icon: "forward", keys: "Alt+Right", disabled: !ready || trail.forward.length === 0, run: () => step("forward") },
+      { kind: "sep" },
+      { kind: "title", label: t("menu.levels") },
+      ...LEVELS.map(
+        (v): MenuEntry => ({
+          label: v === 0 ? t("menu.levelsAll") : String(v),
+          checked: levels === v,
+          run: () => {
+            setLevels(v);
+            save("levels", String(v));
+          },
+        }),
+      ),
       { kind: "sep" },
       { kind: "title", label: t("menu.theme") },
-      ...(["system", "light", "dark", "grid"] as const).map(
+      ...THEMES.map(
         (v): MenuEntry => ({
-          label: t(v === "system" ? "menu.themeSystem" : v === "light" ? "menu.themeLight" : v === "dark" ? "menu.themeDark" : "menu.themeGrid"),
+          label: t(THEME_LABEL[v]),
           checked: themePref === v,
           run: () => {
             setThemePref(v);
@@ -431,16 +478,28 @@ export function App() {
         if (typing && query) clearFilters();
         else if (phase.is === "scanning") toStart();
       } else if (!typing && ready && disk) {
-        if (e.key === "Backspace" && zoom > 0) zoomTo(disk.parent(zoom));
+        if (e.altKey && e.key === "ArrowLeft") step("back");
+        else if (e.altKey && e.key === "ArrowRight") step("forward");
+        else if (e.key === "Backspace" && zoom > 0) zoomTo(disk.parent(zoom));
         else if (e.ctrlKey && e.key.toLowerCase() === "c" && selected >= 0) {
           void window.api.copyText(disk.path(selected)).then(() => flash(t("copied")));
         } else if (e.key === "Delete" && selected > 0 && !(e.target as HTMLElement).closest?.(".rows")) setTrash([selected]);
       }
     };
+    // The side buttons of a mouse go back and forward, as in a browser.
+    const onMouse = (e: MouseEvent): void => {
+      if (!ready) return;
+      if (e.button === 3) step("back");
+      else if (e.button === 4) step("forward");
+    };
     window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    window.addEventListener("mouseup", onMouse);
+    return () => {
+      window.removeEventListener("keydown", onKey);
+      window.removeEventListener("mouseup", onMouse);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, disk, zoom, selected, phase, query, t, startScan, pickFolder, zoomTo, toStart]);
+  }, [ready, disk, zoom, selected, phase, query, t, startScan, pickFolder, zoomTo, toStart, step]);
 
   // Splitter ---------------------------------------------------------------
 
@@ -586,6 +645,24 @@ export function App() {
             </button>
             <button
               className="btn icon"
+              disabled={trail.back.length === 0}
+              title={t("menu.back") + " (Alt+Left)"}
+              aria-label={t("menu.back")}
+              onClick={() => step("back")}
+            >
+              <Icon name="back" />
+            </button>
+            <button
+              className="btn icon"
+              disabled={trail.forward.length === 0}
+              title={t("menu.forward") + " (Alt+Right)"}
+              aria-label={t("menu.forward")}
+              onClick={() => step("forward")}
+            >
+              <Icon name="forward" />
+            </button>
+            <button
+              className="btn icon"
               disabled={zoom === 0}
               title={t("menu.zoomOut") + " (Backspace)"}
               aria-label={t("menu.zoomOut")}
@@ -653,6 +730,7 @@ export function App() {
               version={version}
               theme={theme}
               zoom={zoom}
+              levels={levels === 0 ? Infinity : levels}
               selected={selected}
               hover={hover}
               comparison={comparison}

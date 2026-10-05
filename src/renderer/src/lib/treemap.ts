@@ -23,8 +23,10 @@ export const K_FILE = 0;
 export const K_DIR = 1;
 export const K_DIR_LABELLED = 2;
 export const K_REST = 3;
+export const K_PACK = 4; // a folder past the level limit, drawn as one solid block
 
-export function layoutTreemap(disk: Disk, root: number, width: number, height: number): Layout {
+// `levels` is how many levels of folders open up as rooms below the root.
+export function layoutTreemap(disk: Disk, root: number, width: number, height: number, levels = Infinity): Layout {
   const out: Layout = {
     count: 0,
     id: new Int32Array(4096),
@@ -66,6 +68,10 @@ export function layoutTreemap(disk: Disk, root: number, width: number, height: n
     if (out.count >= MAX_RECTS) return;
     if (!disk.isDir(id)) {
       push(id, x, y, w, h, depth, K_FILE);
+      return;
+    }
+    if (depth > levels) {
+      push(id, x, y, w, h, depth, K_PACK);
       return;
     }
     const labelled = w >= 46 && h >= HEADER + 14;
