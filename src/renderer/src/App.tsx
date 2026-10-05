@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import type { DriveInfo, ScanProgress, SnapshotMeta, UpdateStatus } from "../../shared/types";
+import type { DriveInfo, ScanProgress, ScanTable, SnapshotMeta, UpdateStatus } from "../../shared/types";
 import { Disk } from "./lib/disk";
 import { NO_FILTER, compare, isFiltering, runFilter, topFiles } from "./lib/analysis";
 import type { Comparison, Filter } from "./lib/analysis";
@@ -81,6 +81,8 @@ export function App() {
   const [dropping, setDropping] = useState(false);
   const [appVersion, setAppVersion] = useState("");
   const askedUpdate = useRef(false);
+  const view = useRef({ disk, zoom, selected, expanded });
+  view.current = { disk, zoom, selected, expanded };
   const searchRef = useRef<HTMLInputElement>(null);
 
   // Preferences ------------------------------------------------------------
@@ -116,6 +118,8 @@ export function App() {
     setMenu(null);
     setProgress(null);
     setNotice(null);
+    setDisk(null);
+    setTab("tree");
     setPhase({ is: "scanning", root });
     void window.api.cancelDuplicates();
     void window.api.startScan(root).then((r) => {
@@ -138,15 +142,33 @@ export function App() {
 
   useEffect(() => {
     const offP = window.api.onScanProgress(setProgress);
-    const offD = window.api.onScanDone((table) => {
+    // A new table has new ids. Carry the view over by name so the plan does
+    // not jump back to the top every time the live preview refreshes.
+    const adopt = (table: ScanTable): void => {
       const d = new Disk(table);
+      const old = view.current;
+      let zoom = 0;
+      let selected = -1;
+      const expanded = new Set([0]);
+      if (old.disk && old.disk.t.root === table.root) {
+        const z = d.follow(old.disk.trail(old.zoom));
+        if (z > 0 && d.isDir(z) && d.size(z) > 0) zoom = z;
+        if (old.selected > 0) selected = d.follow(old.disk.trail(old.selected));
+        for (const id of old.expanded) {
+          const e = id > 0 ? d.follow(old.disk.trail(id)) : -1;
+          if (e > 0) expanded.add(e);
+        }
+      }
       setDisk(d);
       setVersion(0);
-      setZoom(0);
-      setSelected(-1);
+      setZoom(zoom);
+      setSelected(selected);
       setHover(-1);
-      setExpanded(new Set([0]));
-      setTab("tree");
+      setExpanded(expanded);
+    };
+    const offL = window.api.onScanPartial(adopt);
+    const offD = window.api.onScanDone((table) => {
+      adopt(table);
       setQuery("");
       setFilter(NO_FILTER);
       setComparison(null);
@@ -174,6 +196,7 @@ export function App() {
     });
     return () => {
       offP();
+      offL();
       offD();
       offE();
       offU();
@@ -325,6 +348,8 @@ export function App() {
   // Menus ------------------------------------------------------------------
 
   const ready = phase.is === "ready" && disk !== null;
+  // During a scan the plan is already on screen, filling in as folders are measured.
+  const live = phase.is === "scanning" && disk !== null;
   const menus: Record<string, () => MenuEntry[]> = {
     file: () => [
       { label: t("menu.chooseFolder"), icon: "folder", keys: "Ctrl+O", run: pickFolder },
@@ -528,13 +553,29 @@ export function App() {
 
       {phase.is === "start" && <StartSheet drives={drives} t={t} fmt={fmt} onScan={startScan} onPick={pickFolder} />}
 
-      {(phase.is === "scanning" || phase.is === "failed") && (
+      {((phase.is === "scanning" && !live) || phase.is === "failed") && (
         <ScanSheet phase={phase} progress={progress} t={t} fmt={fmt} onStop={toStart} onRetry={() => startScan(phase.root)} />
       )}
 
-      {ready && (
+      {(ready || live) && disk && (
         <>
-          <div className="toolrow">
+          {live && (
+            <div className="toolrow livebar" role="status">
+              <Icon name="scan" />
+              <strong>{t("scan.title", { root: disk.t.root })}</strong>
+              <span className="live-now">
+                <bdi>{progress?.current ?? ""}</bdi>
+              </span>
+              <span className="live-count">
+                {fmt.count(progress?.files ?? 0)} {t("scan.files").toLowerCase()}, {fmt.bytes(progress?.bytes ?? 0)}
+              </span>
+              <button className="btn" onClick={toStart}>
+                <Icon name="stop" />
+                {t("scan.cancel")}
+              </button>
+            </div>
+          )}
+          <div className="toolrow" style={live ? { display: "none" } : undefined}>
             <button className="btn" title={t("menu.start")} onClick={toStart}>
               <Icon name="drive" />
               {t("tool.drives")}
@@ -699,7 +740,7 @@ export function App() {
             <div className="tb-cell">
               <span className="k">{t("block.scanned")}</span>
               <span className="v">
-                {fmt.when(disk.t.startedAt)}
+                {live ? t("scan.running") : fmt.when(disk.t.startedAt)}
                 <small>{t("block.in", { time: fmt.duration(disk.t.durationMs) })}</small>
               </span>
             </div>

@@ -36,6 +36,7 @@ const en = {
 
   "scan.title": "Scanning {root}",
   "scan.cancel": "Stop",
+  "scan.running": "running",
   "scan.files": "Files",
   "scan.folders": "Folders",
   "scan.bytes": "Measured",
@@ -208,6 +209,7 @@ const pt: Record<Key, string> = {
 
   "scan.title": "Escaneando {root}",
   "scan.cancel": "Parar",
+  "scan.running": "em andamento",
   "scan.files": "Arquivos",
   "scan.folders": "Pastas",
   "scan.bytes": "Medido",

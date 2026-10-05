@@ -208,7 +208,117 @@ function onResult(w: number, res: DirResult): void {
     lastProgress = now;
     port.postMessage({ type: "progress", progress: progress() });
   }
+  // Never let the preview take more than about a tenth of the scan's time.
+  if (!cancelled && now - lastLive > Math.max(900, liveCost * 10)) live();
   dispatch();
+}
+
+// Live preview -------------------------------------------------------------
+// While the walk is running, the top levels of what has been measured so far
+// are sent out about once a second so the plan can fill in as it goes.
+
+const LIVE_DEPTH = 5;
+let lastLive = Date.now();
+let liveCost = 0;
+
+function live(): void {
+  const began = Date.now();
+  const count = n;
+  const sz = size.slice(0, count);
+  const lg = logical.slice(0, count);
+  const mt = mtime.slice(0, count);
+  const fc = new Uint32Array(count);
+  const depth = new Uint8Array(count);
+  for (let i = 1; i < count; i++) depth[i] = Math.min(254, depth[parent[i]] + 1);
+  for (let i = count - 1; i >= 1; i--) {
+    const p = parent[i];
+    sz[p] += sz[i];
+    lg[p] += lg[i];
+    fc[p] += flags[i] & F_DIR ? fc[i] : 1;
+    if (mt[i] > mt[p]) mt[p] = mt[i];
+  }
+
+  // Keep the shallow nodes only. A folder at the cut is sent as a solid
+  // block, so its weight still shows on the plan.
+  const remap = new Int32Array(count).fill(-1);
+  let m = 0;
+  let nameBytes = 0;
+  for (let i = 0; i < count; i++) {
+    if (depth[i] <= LIVE_DEPTH) {
+      remap[i] = m++;
+      nameBytes += nameOff[i + 1] - nameOff[i];
+    }
+  }
+  const tParent = new Int32Array(m);
+  const tSize = new Float64Array(m);
+  const tLogical = new Float64Array(m);
+  const tMtime = new Uint32Array(m);
+  const tFlags = new Uint8Array(m);
+  const tFiles = new Uint32Array(m);
+  const tNameOff = new Uint32Array(m + 1);
+  const tNames = new Uint8Array(nameBytes);
+  let off = 0;
+  for (let i = 0; i < count; i++) {
+    const j = remap[i];
+    if (j === -1) continue;
+    tParent[j] = i === 0 ? -1 : remap[parent[i]];
+    tSize[j] = sz[i];
+    tLogical[j] = lg[i];
+    tMtime[j] = mt[i];
+    tFiles[j] = fc[i];
+    tFlags[j] = depth[i] === LIVE_DEPTH ? flags[i] & ~F_DIR : flags[i];
+    tNames.set(names.subarray(nameOff[i], nameOff[i + 1]), off);
+    off += nameOff[i + 1] - nameOff[i];
+    tNameOff[j + 1] = off;
+  }
+  const childStart = new Int32Array(m + 1);
+  for (let i = 1; i < m; i++) childStart[tParent[i] + 1]++;
+  for (let i = 0; i < m; i++) childStart[i + 1] += childStart[i];
+  const fill = childStart.slice(0, m);
+  const childList = new Int32Array(Math.max(0, m - 1));
+  for (let i = 1; i < m; i++) childList[fill[tParent[i]]++] = i;
+  const bySize = (a: number, b: number): number => tSize[b] - tSize[a] || a - b;
+  for (let i = 0; i < m; i++) {
+    if (childStart[i + 1] - childStart[i] > 1) childList.subarray(childStart[i], childStart[i + 1]).sort(bySize);
+  }
+  const ext = new Uint16Array(m);
+
+  const table: ScanTable = {
+    root: job.root,
+    n: m,
+    parent: tParent,
+    size: tSize,
+    logical: tLogical,
+    mtime: tMtime,
+    flags: tFlags,
+    files: tFiles,
+    nameOff: tNameOff,
+    names: tNames,
+    childStart,
+    childList,
+    ext,
+    exts: [""],
+    startedAt,
+    durationMs: Date.now() - startedAt,
+    dirs: dirCount,
+    errors: errorCount,
+    errorSamples: [],
+  };
+  port.postMessage({ type: "partial", table }, [
+    tParent.buffer,
+    tSize.buffer,
+    tLogical.buffer,
+    tMtime.buffer,
+    tFlags.buffer,
+    tFiles.buffer,
+    tNameOff.buffer,
+    tNames.buffer,
+    childStart.buffer,
+    childList.buffer,
+    ext.buffer,
+  ] as ArrayBuffer[]);
+  lastLive = Date.now();
+  liveCost = lastLive - began;
 }
 
 function nameOf(id: number): string {

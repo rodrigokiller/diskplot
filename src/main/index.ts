@@ -121,6 +121,7 @@ ipcMain.handle("scan:start", (_e, rootArg: string) => {
   worker.on("message", (msg) => {
     if (!mine()) return;
     if (msg.type === "progress") send("scan:progress", msg.progress);
+    else if (msg.type === "partial") send("scan:partial", msg.table);
     else if (msg.type === "done") {
       send("scan:done", msg.table, msg.snapshot);
       stopScan();

@@ -379,6 +379,31 @@ p {
   color: var(--paper);
 }
 
+.livebar {
+  background: var(--t1);
+  color: var(--on-weak);
+  border-bottom-color: var(--line-strong);
+  gap: 10px;
+  padding-left: 12px;
+}
+.livebar strong {
+  font-weight: 600;
+  white-space: nowrap;
+}
+.livebar .live-now {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  direction: rtl;
+  text-align: left;
+  opacity: 0.8;
+}
+.livebar .live-count {
+  white-space: nowrap;
+}
+
 /* Work area ------------------------------------------------------------- */
 
 .work {

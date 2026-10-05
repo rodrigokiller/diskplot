@@ -65,6 +65,29 @@ export class Disk {
     return (root.endsWith(this.sep) ? root : root + this.sep) + parts.reverse().join(this.sep);
   }
 
+  // The names from the root down to a node, and the way back. Used to carry
+  // a position from one table to the next, where ids differ.
+  trail(id: number): string[] {
+    const out: string[] = [];
+    for (let i = id; i > 0; i = this.t.parent[i]) out.push(this.name(i));
+    return out.reverse();
+  }
+  follow(trail: string[]): number {
+    let at = 0;
+    for (const name of trail) {
+      let next = -1;
+      for (const c of this.children(at)) {
+        if (this.name(c) === name) {
+          next = c;
+          break;
+        }
+      }
+      if (next === -1) return -1;
+      at = next;
+    }
+    return at;
+  }
+
   // Root first, the node itself last.
   ancestors(id: number): number[] {
     const out: number[] = [];

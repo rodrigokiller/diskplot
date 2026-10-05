@@ -29,6 +29,7 @@ const api = {
     ipcRenderer.invoke("scan:start", root),
   cancelScan: (): Promise<void> => ipcRenderer.invoke("scan:cancel"),
   onScanProgress: (cb: (p: ScanProgress) => void) => on("scan:progress", cb),
+  onScanPartial: (cb: (t: ScanTable) => void) => on("scan:partial", cb),
   onScanDone: (cb: (t: ScanTable, snapshot: SnapshotMeta | null) => void) => on("scan:done", cb),
   onScanError: (cb: (error: string) => void) => on("scan:error", cb),
 
