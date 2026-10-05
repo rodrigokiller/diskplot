@@ -14,6 +14,7 @@ interface Props {
   hover: number;
   expanded: Set<number>;
   reveal: number;
+  fresh: Set<number>;
   wide: boolean;
   fmt: Fmt;
   t: T;
@@ -169,7 +170,7 @@ export const TreeView = memo(function TreeView(p: Props) {
               key={id}
               role="row"
               aria-selected={id === p.selected}
-              className={"trow" + (id === p.selected ? " sel" : id === p.hover ? " hot" : "")}
+              className={"trow" + (id === p.selected ? " sel" : id === p.hover ? " hot" : "") + (p.fresh.has(id) ? " new" : "")}
               style={{ top, gridTemplateColumns: GRID }}
               onMouseEnter={() => p.onHover(id)}
               onMouseDown={() => p.onSelect(id)}

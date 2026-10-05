@@ -101,6 +101,17 @@ export function App() {
   const [dialog, setDialog] = useState<"issues" | "about" | "keys" | null>(null);
   const [notice, setNotice] = useState<{ text: string; bad?: boolean; progress?: number; action?: { label: string; run: () => void } } | null>(null);
   const [stopping, setStopping] = useState(false);
+  // The scan's numbers, shown under the schedule while it runs.
+  const [dockOpen, setDockOpen] = useState(true);
+  // Items added a moment ago, so the plan and the tree can point them out.
+  const [fresh, setFresh] = useState<Set<number>>(() => new Set());
+  const freshTimer = useRef(0);
+  const markFresh = (ids: number[]): void => {
+    if (ids.length === 0) return;
+    setFresh(new Set(ids.slice(0, 500)));
+    window.clearTimeout(freshTimer.current);
+    freshTimer.current = window.setTimeout(() => setFresh(new Set()), 1700);
+  };
   // Live sync: the wish (remembered) and whether it had to give up on this scan.
   const [sync, setSync] = useState(() => load("sync", ["on", "off"] as const, "off") === "on");
   const [syncLost, setSyncLost] = useState(false);
@@ -157,6 +168,8 @@ export function App() {
     setProgress(null);
     setNotice(null);
     setSyncLost(false);
+    setDockOpen(true);
+    setFresh(new Set());
     setDisk(null);
     setTab("tree");
     setPhase({ is: "scanning", root });
@@ -419,7 +432,10 @@ export function App() {
     }
     setHover(-1);
     setVersion((v) => v + 1);
-    if (last >= 0) select(last);
+    if (last >= 0) {
+      select(last);
+      markFresh([last]);
+    }
     if (failed > 0) {
       const known = ["EINSIDE", "ESAME", "EEXIST"].includes(why) ? (why as "EINSIDE" | "ESAME" | "EEXIST") : "other";
       setNotice({ text: t("clip.failed", { count: failed, why: t(`clip.${known}`) }), bad: true });
@@ -584,7 +600,7 @@ export function App() {
         return true;
       });
       if (fresh.length > 0) {
-        d.graftAll(fresh);
+        markFresh(d.graftAll(fresh));
         changed = true;
       }
       if (changed) {
@@ -1031,6 +1047,15 @@ export function App() {
               <span className="live-count">
                 {fmt.count(progress?.files ?? 0)} {t("scan.files").toLowerCase()}, {fmt.bytes(progress?.bytes ?? 0)}
               </span>
+              <button
+                className={"btn icon" + (dockOpen ? " on" : "")}
+                aria-pressed={dockOpen}
+                title={t("scan.details")}
+                aria-label={t("scan.details")}
+                onClick={() => setDockOpen((o) => !o)}
+              >
+                <Icon name="info" />
+              </button>
               <button className="btn" disabled={stopping} onClick={stopHere}>
                 <Icon name="stop" />
                 {t(stopping ? "scan.stopping" : "scan.cancel")}
@@ -1143,6 +1168,7 @@ export function App() {
               version={version}
               theme={theme}
               zoom={zoom}
+              fresh={fresh}
               levels={levels === 0 ? Infinity : levels}
               selected={selected}
               hover={hover}
@@ -1174,6 +1200,7 @@ export function App() {
                   hover={hover}
                   expanded={expanded}
                   reveal={reveal}
+                  fresh={fresh}
                   wide={panelWidth >= 560}
                   fmt={fmt}
                   t={t}
@@ -1208,6 +1235,7 @@ export function App() {
                   }
                 />
               )}
+              {live && dockOpen && <ScanDock progress={progress} t={t} fmt={fmt} onClose={() => setDockOpen(false)} />}
             </aside>
           </div>
 
@@ -1601,6 +1629,82 @@ function StartSheet(p: { drives: DriveInfo[] | null; t: T; fmt: Fmt; onScan: (ro
   );
 }
 
+// Where the centred scan sheet last stood. When the plan takes over, the
+// dock starts there and travels to its place under the schedule.
+let sheetRect: DOMRect | null = null;
+
+function ScanDock(p: { progress: ScanProgress | null; t: T; fmt: Fmt; onClose: () => void }) {
+  const { t, fmt } = p;
+  const pr = p.progress;
+  const ref = useRef<HTMLDivElement>(null);
+  const max = pr && pr.top.length > 0 ? pr.top[0].bytes || 1 : 1;
+
+  useLayoutEffect(() => {
+    const el = ref.current;
+    const from = sheetRect;
+    sheetRect = null;
+    if (!el || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const to = el.getBoundingClientRect();
+    const frames = from
+      ? [
+          {
+            transform: `translate(${from.left - to.left}px, ${from.top - to.top}px) scale(${from.width / to.width}, ${Math.min(2.2, from.height / to.height)})`,
+            opacity: 0.5,
+          },
+          { transform: "none", opacity: 1 },
+        ]
+      : [
+          { transform: "translateY(24px)", opacity: 0 },
+          { transform: "none", opacity: 1 },
+        ];
+    el.animate(frames, { duration: from ? 520 : 240, easing: "cubic-bezier(0.16, 1, 0.3, 1)" });
+  }, []);
+
+  return (
+    <div className="dock" ref={ref}>
+      <div className="dock-head">
+        {t("scan.dockTitle")}
+        <span className="path">
+          <bdi>{pr?.current ?? ""}</bdi>
+        </span>
+        <button className="btn quiet icon" style={{ height: 24 }} aria-label={t("issues.close")} title={t("issues.close")} onClick={p.onClose}>
+          <Icon name="close" />
+        </button>
+      </div>
+      <div className="dock-nums">
+        <div>
+          <div className="k">{t("scan.bytes")}</div>
+          <div className="v">{fmt.bytes(pr?.bytes ?? 0)}</div>
+        </div>
+        <div>
+          <div className="k">{t("scan.files")}</div>
+          <div className="v">{fmt.count(pr?.files ?? 0)}</div>
+        </div>
+        <div>
+          <div className="k">{t("scan.folders")}</div>
+          <div className="v">{fmt.count(pr?.dirs ?? 0)}</div>
+        </div>
+        <div>
+          <div className="k">{t("scan.rate")}</div>
+          <div className="v">{fmt.count(pr && pr.elapsedMs > 0 ? (pr.files / pr.elapsedMs) * 1000 : 0)}</div>
+        </div>
+      </div>
+      <div className="sofar" style={{ margin: 0 }}>
+        {pr?.top.slice(0, 6).map((row) => (
+          <div className="sofar-row" key={row.name}>
+            <span className="n">
+              <Icon name={row.dir ? "folder" : "file"} />
+              {row.name}
+            </span>
+            <span className="bar" style={{ transform: `scaleX(${Math.max(0.004, row.bytes / max)})` }} />
+            <span className="s">{fmt.bytes(row.bytes)}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 function ScanSheet(p: {
   phase: { is: "scanning"; root: string } | { is: "failed"; root: string; error: string };
   progress: ScanProgress | null;
@@ -1612,9 +1716,13 @@ function ScanSheet(p: {
   const { t, fmt, phase } = p;
   const pr = p.progress;
   const max = pr && pr.top.length > 0 ? pr.top[0].bytes || 1 : 1;
+  const card = useRef<HTMLDivElement>(null);
+  useLayoutEffect(() => {
+    if (phase.is === "scanning" && card.current) sheetRect = card.current.getBoundingClientRect();
+  });
   return (
     <main className="sheet scan">
-      <div className="sheet-inner">
+      <div className="sheet-inner" ref={card}>
         <h1>{t("scan.title", { root: phase.root })}</h1>
         {phase.is === "failed" ? (
           <div className="problem" role="alert">

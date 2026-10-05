@@ -8,6 +8,7 @@ import type { Layout } from "../lib/treemap";
 const FONT = '12px "Barlow", "Bahnschrift", "Segoe UI", sans-serif';
 const MARK_FLOOR = 4 * 1024 * 1024;
 const ZOOM_MS = 280;
+const FADE_MS = 260;
 
 interface Colors {
   paper: string;
@@ -186,6 +187,7 @@ interface Props {
   levels: number;
   selected: number;
   hover: number;
+  fresh: Set<number>; // just added: outlined for a moment
   comparison: Comparison | null;
   showDelta: boolean;
   fmt: Fmt;
@@ -204,7 +206,13 @@ export const Treemap = memo(function Treemap(p: Props) {
   const [box, setBox] = useState({ w: 0, h: 0 });
   const [fonts, setFonts] = useState(0);
   const [tip, setTip] = useState<{ x: number; y: number; rect: number } | null>(null);
-  const last = useRef<{ zoom: number; layout: Layout | null; disk: Disk | null }>({ zoom: -1, layout: null, disk: null });
+  const last = useRef<{ zoom: number; layout: Layout | null; disk: Disk | null; version: number; theme: string }>({
+    zoom: -1,
+    layout: null,
+    disk: null,
+    version: 0,
+    theme: "",
+  });
   const anim = useRef(0);
   const wheelAt = useRef(0);
   const { disk, zoom, fmt, t, onArea } = p;
@@ -243,7 +251,17 @@ export const Treemap = memo(function Treemap(p: Props) {
     let from: HTMLCanvasElement | null = null;
     const zooming = prev.disk === disk && prev.zoom !== zoom && prev.layout !== null && cv.width === W && cv.height === H;
     const still = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    if (zooming && !still) {
+    // The same view with new numbers: a scan filling in, a paste, a file that
+    // grew. Those dissolve from the old drawing into the new one.
+    const refreshed =
+      !zooming &&
+      prev.layout !== null &&
+      prev.theme === p.theme &&
+      cv.width === W &&
+      cv.height === H &&
+      (prev.disk !== disk || prev.version !== p.version) &&
+      (prev.disk === disk || prev.disk?.t.root === disk.t.root);
+    if ((zooming || refreshed) && !still) {
       from = document.createElement("canvas");
       from.width = W;
       from.height = H;
@@ -256,7 +274,26 @@ export const Treemap = memo(function Treemap(p: Props) {
     const colors = readColors();
     drawPlan(ctx, layout, disk, zoom, colors, dpr, fmt, delta);
 
-    if (from && prev.layout) {
+    if (from && refreshed) {
+      const to = document.createElement("canvas");
+      to.width = W;
+      to.height = H;
+      to.getContext("2d")!.drawImage(cv, 0, 0);
+      const old = from;
+      const start = performance.now();
+      const step = (now: number): void => {
+        const k = Math.min(1, (now - start) / FADE_MS);
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
+        ctx.globalAlpha = 1;
+        ctx.drawImage(old, 0, 0);
+        ctx.globalAlpha = 1 - Math.pow(1 - k, 3);
+        ctx.drawImage(to, 0, 0);
+        ctx.globalAlpha = 1;
+        if (k < 1) anim.current = requestAnimationFrame(step);
+      };
+      step(start);
+      anim.current = requestAnimationFrame(step);
+    } else if (from && prev.layout) {
       const goingIn = disk.contains(prev.zoom, zoom);
       // The room being entered or left, as it sits in the wider of the two views.
       const r = goingIn ? findRect(prev.layout, zoom) : findRect(layout, prev.zoom);
@@ -302,9 +339,9 @@ export const Treemap = memo(function Treemap(p: Props) {
         anim.current = requestAnimationFrame(step);
       }
     }
-    last.current = { zoom, layout, disk };
+    last.current = { zoom, layout, disk, version: p.version, theme: p.theme };
     return () => cancelAnimationFrame(anim.current);
-  }, [layout, disk, zoom, box, p.theme, fonts, fmt, delta]);
+  }, [layout, disk, zoom, box, p.theme, fonts, fmt, delta, p.version]);
 
   // Hover and selection, on their own layer so the plan is not redrawn.
   useEffect(() => {
@@ -322,11 +359,17 @@ export const Treemap = memo(function Treemap(p: Props) {
       const i = findRect(layout, p.hover);
       if (i >= 0) outline(ctx, layout, i, c.ink, c.paper);
     }
+    let marked = 0;
+    for (const id of p.fresh) {
+      if (marked++ > 60) break;
+      const i = findRect(layout, id);
+      if (i >= 0) outline(ctx, layout, i, c.tones[4], c.paper);
+    }
     if (p.selected >= 0 && p.selected !== zoom) {
       const i = findRect(layout, p.selected);
       if (i >= 0) outline(ctx, layout, i, c.red, c.paper);
     }
-  }, [layout, box, p.hover, p.selected, p.theme, zoom]);
+  }, [layout, box, p.hover, p.selected, p.theme, zoom, p.fresh]);
 
   const at = (e: { clientX: number; clientY: number }): number => {
     const r = over.current!.getBoundingClientRect();
