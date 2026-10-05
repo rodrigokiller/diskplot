@@ -9,7 +9,7 @@
 // pre-requisitos: working tree limpo, `gh` autenticado (gh auth login). Nada de segredo no codigo:
 // o token vem de `gh auth token` na hora.
 import { execSync } from "node:child_process";
-import { readFileSync, writeFileSync, existsSync, unlinkSync } from "node:fs";
+import { readFileSync, writeFileSync, existsSync, unlinkSync, mkdirSync } from "node:fs";
 import { createInterface } from "node:readline/promises";
 
 const cap = (cmd) => execSync(cmd, { encoding: "utf8" }).trim(); // captura a saida
@@ -22,6 +22,9 @@ const die = (msg) => {
 const argv = process.argv.slice(2);
 const dry = argv.includes("--dry");
 const yes = argv.includes("--yes");
+// Com o fluxo do GitHub Actions no repositorio, quem compila e publica e o GitHub (Windows,
+// Linux e macOS): aqui so sobe a versao e empurra a tag. --local forca o build nesta maquina.
+const ci = existsSync(".github/workflows/release.yml") && !argv.includes("--local");
 const nfIdx = argv.indexOf("--notes-file");
 const notesFile = nfIdx >= 0 ? argv[nfIdx + 1] : null;
 const bump = argv.find((a) => !a.startsWith("--") && a !== notesFile);
@@ -103,7 +106,7 @@ if (dry) {
 
 if (!yes) {
   const rl = createInterface({ input: process.stdin, output: process.stdout });
-  const ans = (await rl.question(`Publicar ${tag} em ${repo}? Isso builda, sobe o instalador e PUBLICA a release. [s/N] `)).trim().toLowerCase();
+  const ans = (await rl.question(`Publicar ${tag} em ${repo}? Isso PUBLICA a release. [s/N] `)).trim().toLowerCase();
   rl.close();
   if (ans !== "s" && ans !== "sim" && ans !== "y") {
     console.log("cancelado.");
@@ -113,6 +116,19 @@ if (!yes) {
 
 // 1) bump + commit + push (a release aponta pra esse commit)
 run(`npm version ${next} --no-git-tag-version`);
+if (ci) {
+  // as notas viajam no proprio repositorio: o fluxo le notes/<tag>.md ao publicar
+  if (!existsSync("notes")) mkdirSync("notes");
+  writeFileSync(written, notes.trimEnd() + "\n");
+  run(`git add package.json package-lock.json notes`);
+  run(`git commit -m "chore(release): ${tag}"`);
+  run(`git tag ${tag}`);
+  run(`git push`);
+  run(`git push origin ${tag}`);
+  console.log(`\nOK -- tag ${tag} enviada. O GitHub esta compilando: https://github.com/${repo}/actions`);
+  console.log(`Acompanhe com: gh run watch --exit-status`);
+  process.exit(0);
+}
 run(`git add package.json package-lock.json`);
 run(`git commit -m "chore(release): ${tag}"`);
 run(`git push`);

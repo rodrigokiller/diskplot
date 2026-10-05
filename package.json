@@ -46,8 +46,7 @@
       "icon": "build/icon.png",
       "category": "Utility",
       "target": [
-        "AppImage",
-        "deb"
+        "AppImage"
       ],
       "artifactName": "${productName}-${version}-${arch}.${ext}"
     },

@@ -1,0 +1,64 @@
+# Builds the installers whenever a version tag is pushed and publishes that
+# version's release. Started by `npm run release`, which bumps the version and
+# pushes the tag.
+#
+# Windows is the supported system. The Linux and macOS builds are experimental:
+# they have not been tested, the macOS build is not signed, and a failure in
+# either does not stop the release.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            args: --win
+            experimental: false
+          - os: ubuntu-latest
+            args: --linux
+            experimental: true
+          - os: macos-latest
+            args: --mac
+            experimental: true
+    runs-on: ${{ matrix.os }}
+    continue-on-error: ${{ matrix.experimental }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx electron-vite build
+      - run: npx electron-builder ${{ matrix.args }} --publish always
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          CSC_IDENTITY_AUTO_DISCOVERY: "false"
+
+  # electron-builder leaves the release as a draft. Give it its title and its
+  # notes, then make it public.
+  publish:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Publish the release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          tag="$GITHUB_REF_NAME"
+          if [ -f "notes/$tag.md" ]; then
+            gh release edit "$tag" --draft=false --title "Diskplot ${tag#v}" --notes-file "notes/$tag.md"
+          else
+            gh release edit "$tag" --draft=false --title "Diskplot ${tag#v}"
+          fi
