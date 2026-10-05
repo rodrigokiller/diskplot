@@ -48,7 +48,7 @@ const en = {
       ["Search and filters", "Search by name across the whole scan as you type. Filter by minimum size, by age or by file type."],
       ["Duplicate files", "Files of equal length are compared by content. Runs on request, not during the scan."],
       ["Size on disk", "Sizes are the space actually allocated, so compressed, sparse and online-only cloud files are counted for what they occupy."],
-      ["Folder levels", "The treemap opens four levels of folders by default and draws deeper ones as a single block. The limit is adjustable."],
+      ["Folder levels", "The treemap opens three levels of folders by default and draws deeper ones as a single block. The limit is adjustable."],
       ["Several windows", "Each window holds one scan. Scan two drives at once and place them side by side."],
       ["File operations", "Copy, cut and paste inside the scan, send to the Recycle Bin, and a properties panel for any item."],
       ["Themes", "Two themes, each in light and dark. English and Brazilian Portuguese."],
@@ -131,11 +131,11 @@ const pt = {
     rows: [
       ["Vista ao vivo", "O treemap e a árvore vão sendo preenchidos enquanto o scan roda. Não é preciso esperar uma barra de progresso terminar."],
       ["Comparação de scans", "Cada scan salva um pequeno retrato. O próximo scan do mesmo local lista o que cresceu, o que é novo e o que sumiu."],
-      ["Detecção de tralha", "Reconhece node_modules, saída de build, caches de gerenciadores de pacotes, ambientes virtuais, pastas temporárias e caches de navegador, e soma tudo."],
+      ["Limpeza", "Reconhece node_modules, saída de build, caches de gerenciadores de pacotes, ambientes virtuais, pastas temporárias e caches de navegador, e soma tudo."],
       ["Busca e filtros", "Busca por nome no scan inteiro enquanto você digita. Filtros por tamanho mínimo, por idade e por tipo de arquivo."],
       ["Arquivos duplicados", "Arquivos do mesmo tamanho são comparados pelo conteúdo. Roda sob demanda, não durante o scan."],
       ["Tamanho em disco", "Os tamanhos são o espaço realmente alocado, então arquivos compactados, esparsos e de nuvem que estão só online contam pelo que ocupam."],
-      ["Níveis de pasta", "O treemap abre quatro níveis de pastas por padrão e desenha os mais fundos como um bloco só. O limite é ajustável."],
+      ["Níveis de pasta", "O treemap abre três níveis de pastas por padrão e desenha os mais fundos como um bloco só. O limite é ajustável."],
       ["Várias janelas", "Cada janela guarda um scan. Escaneie duas unidades ao mesmo tempo e coloque uma ao lado da outra."],
       ["Operações com arquivos", "Copiar, recortar e colar dentro do scan, enviar para a Lixeira e um painel de propriedades para qualquer item."],
       ["Temas", "Dois temas, cada um em claro e escuro. Inglês e português do Brasil."],
@@ -144,8 +144,8 @@ const pt = {
   safe: {
     h: "Nada é apagado sem confirmação.",
     p: "O que é removido vai para a Lixeira. Não há limpeza automática nem botão de resolver tudo.",
-    alt: "A aba de tralha listando pastas node_modules e de build com os tamanhos",
-    cap: "A aba de tralha (interface em inglês).",
+    alt: "A aba Limpeza listando pastas node_modules e de build com os tamanhos",
+    cap: "A aba Limpeza (interface em inglês).",
   },
   speed: {
     h: "Velocidade do scan",
@@ -163,7 +163,7 @@ const pt = {
     items: [
       ["WizTree", "Lê a tabela de arquivos do NTFS direto, o que é mais rápido do que percorrer pastas, o Diskplot incluído. Exige permissão de administrador. Código fechado, com licença paga para uso comercial."],
       ["SpaceSniffer", "Um treemap com atualização ao vivo. Gratuito, de código fechado. Não tem vista em árvore."],
-      ["WinDirStat", "Código aberto, com árvore e treemap colorido por tipo de arquivo. O Diskplot acrescenta a comparação de scans e a soma da tralha."],
+      ["WinDirStat", "Código aberto, com árvore e treemap colorido por tipo de arquivo. O Diskplot acrescenta a comparação de scans e a soma do que dá para limpar."],
     ],
   },
   faq: {

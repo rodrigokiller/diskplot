@@ -84,7 +84,7 @@ export function App() {
     }
   });
   const [planArea, setPlanArea] = useState(0);
-  const [levels, setLevels] = useState(() => Number(load("levels", ["2", "3", "4", "5", "6", "0"] as const, "4")));
+  const [levels, setLevels] = useState(() => Number(load("levels", ["2", "3", "4", "5", "6", "0"] as const, "3")));
   // Where the plan has been, for Back and Forward.
   const [trail, setTrail] = useState<{ back: number[]; forward: number[] }>({ back: [], forward: [] });
 
@@ -96,7 +96,8 @@ export function App() {
   const [itemStat, setItemStat] = useState<ItemStat | null>(null);
   const [trash, setTrash] = useState<number[] | null>(null);
   const [dialog, setDialog] = useState<"issues" | "about" | "keys" | null>(null);
-  const [notice, setNotice] = useState<{ text: string; bad?: boolean; action?: { label: string; run: () => void } } | null>(null);
+  const [notice, setNotice] = useState<{ text: string; bad?: boolean; progress?: number; action?: { label: string; run: () => void } } | null>(null);
+  const [stopping, setStopping] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [dropping, setDropping] = useState(false);
   const [appVersion, setAppVersion] = useState("");
@@ -168,7 +169,14 @@ export function App() {
     void window.api.pickFolder().then((path) => path && startScan(path));
   }, [startScan]);
 
+  // Stop a scan that already shows something: keep it on screen as it is.
+  const stopHere = useCallback(() => {
+    setStopping(true);
+    void window.api.stopScan();
+  }, []);
+
   const toStart = useCallback(() => {
+    setStopping(false);
     void window.api.cancelScan();
     setPhase({ is: "start" });
     refreshDrives();
@@ -210,6 +218,8 @@ export function App() {
     const offL = window.api.onScanPartial(adopt);
     const offD = window.api.onScanDone((table) => {
       adopt(table);
+      setStopping(false);
+      if (table.incomplete) setNotice({ text: t("scan.stopped"), action: { label: t("menu.rescan"), run: () => startScan(table.root) } });
       setQuery("");
       setFilter(NO_FILTER);
       setComparison(null);
@@ -217,11 +227,14 @@ export function App() {
       setDups(DUP_IDLE);
       setPhase({ is: "ready" });
       void window.api.listSnapshots(table.root).then((all) => {
-        const older = all.filter((s) => s.date < table.startedAt);
+        const older = table.incomplete ? [] : all.filter((s) => s.date < table.startedAt);
         setSnapshots(older);
         if (older.length > 0) setAgainst(older[0].file);
       });
     });
+    const offC = window.api.onPasteProgress((p) =>
+      setNotice({ text: t("clip.progress", { done: fmt.bytes(p.done), total: fmt.bytes(p.total) }), progress: p.total > 0 ? p.done / p.total : 0 }),
+    );
     const offE = window.api.onScanError((error) => setPhase((p) => ({ is: "failed", root: p.is === "scanning" ? p.root : "", error })));
     const offU = window.api.onUpdateStatus((s: UpdateStatus) => {
       const asked = askedUpdate.current;
@@ -239,10 +252,11 @@ export function App() {
       offP();
       offL();
       offD();
+      offC();
       offE();
       offU();
     };
-  }, [t]);
+  }, [t, fmt, startScan]);
 
   // Comparison with an older scan --------------------------------------------
 
@@ -679,7 +693,7 @@ export function App() {
         searchRef.current?.select();
       } else if (e.key === "Escape") {
         if (typing && query) clearFilters();
-        else if (phase.is === "scanning") toStart();
+        else if (phase.is === "scanning") (live ? stopHere : toStart)();
       } else if (!typing && nav && disk) {
         if (e.altKey && e.key === "ArrowLeft") step("back");
         else if (e.altKey && e.key === "ArrowRight") step("forward");
@@ -833,6 +847,13 @@ export function App() {
       {notice && (
         <div className={"notice" + (notice.bad ? " bad" : "")} role="status">
           <span className="grow">{notice.text}</span>
+          {notice.progress !== undefined && (
+            <span className="share" style={{ width: 220 }}>
+              <span className="track">
+                <span className="fill" style={{ width: Math.round(notice.progress * 100) + "%", display: "block" }} />
+              </span>
+            </span>
+          )}
           {notice.action && (
             <button className="btn" onClick={notice.action.run}>
               {notice.action.label}
@@ -877,9 +898,9 @@ export function App() {
               <span className="live-count">
                 {fmt.count(progress?.files ?? 0)} {t("scan.files").toLowerCase()}, {fmt.bytes(progress?.bytes ?? 0)}
               </span>
-              <button className="btn" onClick={toStart}>
+              <button className="btn" disabled={stopping} onClick={stopHere}>
                 <Icon name="stop" />
-                {t("scan.cancel")}
+                {t(stopping ? "scan.stopping" : "scan.cancel")}
               </button>
             </div>
           )}
@@ -1067,7 +1088,7 @@ export function App() {
             <div className="tb-cell">
               <span className="k">{t("block.scanned")}</span>
               <span className="v">
-                {live ? t("scan.running") : fmt.when(disk.t.startedAt)}
+                {live ? t("scan.running") : disk.t.incomplete ? t("scan.stoppedShort") : fmt.when(disk.t.startedAt)}
                 <small>{t("block.in", { time: fmt.duration(disk.t.durationMs) })}</small>
               </span>
             </div>

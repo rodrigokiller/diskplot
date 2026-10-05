@@ -1,6 +1,8 @@
 import { app, BrowserWindow, clipboard, dialog, ipcMain, nativeTheme, screen, shell } from "electron";
 import type { IpcMainInvokeEvent } from "electron";
-import { cp, rename, rm, stat, statfs } from "fs/promises";
+import { copyFile, lstat, mkdir, readdir, readlink, rename, rm, stat, statfs, symlink } from "fs/promises";
+import { createReadStream, createWriteStream } from "fs";
+import { pipeline } from "stream/promises";
 import { existsSync } from "fs";
 import { execFile } from "child_process";
 import { basename, dirname, extname, join, resolve, sep } from "path";
@@ -190,6 +192,11 @@ ipcMain.handle("scan:start", (e, rootArg: string) => {
   return { ok: true, root };
 });
 
+// Stop, keeping what was measured: the worker answers with a last table.
+ipcMain.handle("scan:stop", (e) => {
+  sessionOf(e)?.scan?.postMessage({ type: "stop" });
+});
+
 ipcMain.handle("scan:cancel", (e) => {
   const s = sessionOf(e);
   if (s) stopScan(s);
@@ -332,6 +339,33 @@ ipcMain.handle("clip:get", async (): Promise<FileClip | null> => {
   return clip;
 });
 
+// A copy that reports how far it is. Small files are copied whole; a large
+// one is streamed so the bar keeps moving through it.
+const STREAMED = 32 * 1024 * 1024;
+async function treeBytes(path: string): Promise<number> {
+  const st = await lstat(path);
+  if (!st.isDirectory()) return st.isSymbolicLink() ? 0 : st.size;
+  let sum = 0;
+  for (const name of await readdir(path)) sum += await treeBytes(join(path, name)).catch(() => 0);
+  return sum;
+}
+async function copyTree(src: string, dest: string, onBytes: (n: number) => void): Promise<void> {
+  const st = await lstat(src);
+  if (st.isSymbolicLink()) {
+    await symlink(await readlink(src), dest).catch(() => undefined); // links are kept as links
+  } else if (st.isDirectory()) {
+    await mkdir(dest);
+    for (const name of await readdir(src)) await copyTree(join(src, name), join(dest, name), onBytes);
+  } else if (st.size >= STREAMED) {
+    const from = createReadStream(src);
+    from.on("data", (chunk) => onBytes(chunk.length));
+    await pipeline(from, createWriteStream(dest, { flags: "wx" }));
+  } else {
+    await copyFile(src, dest);
+    onBytes(st.size);
+  }
+}
+
 async function freeName(dir: string, name: string): Promise<string> {
   if (!existsSync(join(dir, name))) return name;
   const ext = extname(name);
@@ -343,9 +377,22 @@ async function freeName(dir: string, name: string): Promise<string> {
   throw new Error("EEXIST");
 }
 
-ipcMain.handle("fs:paste", async (_e, paths: string[], cut: boolean, destArg: string): Promise<PasteResult[]> => {
+ipcMain.handle("fs:paste", async (e, paths: string[], cut: boolean, destArg: string): Promise<PasteResult[]> => {
+  const s = sessionOf(e);
   const destDir = resolve(String(destArg));
   const out: PasteResult[] = [];
+  let total = 0;
+  for (const p of paths) total += await treeBytes(resolve(String(p))).catch(() => 0);
+  let done = 0;
+  let told = 0;
+  const onBytes = (n: number): void => {
+    done += n;
+    const now = Date.now();
+    if (s && now - told > 120) {
+      told = now;
+      send(s, "paste:progress", { done, total });
+    }
+  };
   for (const raw of paths) {
     const src = resolve(String(raw));
     try {
@@ -359,11 +406,11 @@ ipcMain.handle("fs:paste", async (_e, paths: string[], cut: boolean, destArg: st
         } catch (e) {
           // Another drive: copy across, then remove the original.
           if ((e as NodeJS.ErrnoException).code !== "EXDEV") throw e;
-          await cp(src, dest, { recursive: true, errorOnExist: true, force: false });
+          await copyTree(src, dest, onBytes);
           await rm(src, { recursive: true, force: true });
         }
       } else {
-        await cp(src, dest, { recursive: true, errorOnExist: true, force: false });
+        await copyTree(src, dest, onBytes);
       }
       out.push({ src, dest, ok: true });
     } catch (e) {

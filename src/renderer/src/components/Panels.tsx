@@ -152,21 +152,44 @@ const CLUTTER_GRID = "minmax(0, 1fr) 84px 34px";
 const KINDS: ClutterKind[] = ["deps", "build", "cache", "pkgcache", "temp", "browser", "system", "recycle"];
 const HANDS_OFF: ClutterKind[] = ["system", "recycle"];
 
+type ClutterSort = "size" | "name" | "modified";
+
 export const ClutterPane = memo(function ClutterPane(p: PaneProps & { onTrash: (ids: number[]) => void }) {
   const { disk, fmt, t } = p;
+  const [sort, setSort] = useState<ClutterSort>("size");
+  const [closed, setClosed] = useState<Set<ClutterKind>>(() => new Set());
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const hits = useMemo(() => findClutter(disk), [disk, p.version]);
   const rows = useMemo(() => {
+    const collator = new Intl.Collator(undefined, { numeric: true, sensitivity: "base" });
+    const order = (a: number, b: number): number =>
+      sort === "name"
+        ? collator.compare(disk.name(a), disk.name(b)) || collator.compare(disk.path(a), disk.path(b))
+        : sort === "modified"
+          ? disk.t.mtime[b] - disk.t.mtime[a]
+          : disk.size(b) - disk.size(a);
+    const groups = KINDS.map((kind) => {
+      const ids = hits.filter((h) => h.kind === kind).map((h) => h.id);
+      return { kind, ids: ids.sort(order), bytes: ids.reduce((a, id) => a + disk.size(id), 0) };
+    }).filter((g) => g.ids.length > 0);
+    // The heaviest group comes first, whatever the order inside it.
+    groups.sort((a, b) => b.bytes - a.bytes);
     const out: ({ group: ClutterKind; bytes: number; ids: number[] } | { id: number; kind: ClutterKind })[] = [];
-    for (const kind of KINDS) {
-      const mine = hits.filter((h) => h.kind === kind);
-      if (mine.length === 0) continue;
-      out.push({ group: kind, bytes: mine.reduce((a, h) => a + h.bytes, 0), ids: mine.map((h) => h.id) });
-      for (const h of mine) out.push({ id: h.id, kind });
+    for (const g of groups) {
+      out.push({ group: g.kind, bytes: g.bytes, ids: g.ids });
+      if (!closed.has(g.kind)) for (const id of g.ids) out.push({ id, kind: g.kind });
     }
     return out;
-  }, [hits]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [hits, sort, closed, disk, p.version]);
   const reclaim = hits.filter((h) => !HANDS_OFF.includes(h.kind)).reduce((a, h) => a + h.bytes, 0);
+  const toggle = (kind: ClutterKind): void =>
+    setClosed((prev) => {
+      const next = new Set(prev);
+      if (next.has(kind)) next.delete(kind);
+      else next.add(kind);
+      return next;
+    });
 
   if (hits.length === 0)
     return (
@@ -181,6 +204,16 @@ export const ClutterPane = memo(function ClutterPane(p: PaneProps & { onTrash: (
         <br />
         {t("clutter.lead")}
       </div>
+      <div className="pane-bar">
+        <label style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          {t("clutter.sort")}
+          <select className="select" value={sort} onChange={(e) => setSort(e.target.value as ClutterSort)}>
+            <option value="size">{t("sort.size")}</option>
+            <option value="name">{t("sort.name")}</option>
+            <option value="modified">{t("sort.modified")}</option>
+          </select>
+        </label>
+      </div>
       <VirtualRows
         count={rows.length}
         label={t("tab.clutter")}
@@ -188,14 +221,42 @@ export const ClutterPane = memo(function ClutterPane(p: PaneProps & { onTrash: (
         render={(i, top) => {
           const r = rows[i];
           if ("group" in r) {
+            const open = !closed.has(r.group);
             return (
-              <div key={"g" + r.group} role="row" className="trow group" style={{ top, gridTemplateColumns: CLUTTER_GRID }}>
-                <div>
-                  {t(`clutter.${r.group}`)}
-                  <span className="hint">{t(`clutter.${r.group}.hint`)}</span>
+              <div
+                key={"g" + r.group}
+                role="row"
+                aria-expanded={open}
+                className="trow group"
+                style={{ top, gridTemplateColumns: CLUTTER_GRID, cursor: "pointer" }}
+                onClick={() => toggle(r.group)}
+              >
+                <div className="cell-name">
+                  <span className={"twist" + (open ? " open" : "")}>
+                    <Icon name="chevron" size={12} />
+                  </span>
+                  <span className="text">{t(`clutter.${r.group}`)}</span>
+                  <span className="hint">
+                    {r.ids.length}, {t(`clutter.${r.group}.hint`)}
+                  </span>
                 </div>
                 <div className="num">{fmt.bytes(r.bytes)}</div>
-                <div />
+                <div style={{ padding: 0 }}>
+                  {!HANDS_OFF.includes(r.group) && (
+                    <button
+                      className="btn quiet icon"
+                      style={{ height: 24, color: "inherit" }}
+                      title={t("clutter.removeGroup")}
+                      aria-label={t("clutter.removeGroup")}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        p.onTrash(r.ids);
+                      }}
+                    >
+                      <Icon name="trash" />
+                    </button>
+                  )}
+                </div>
               </div>
             );
           }

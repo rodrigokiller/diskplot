@@ -82,6 +82,7 @@ const startedAt = Date.now();
 let lastProgress = 0;
 let finished = false;
 let cancelled = false;
+let stopping = false; // asked to stop, but hand over what was measured
 let ready = 0;
 
 // Workers are asked to leave, never terminated: see dirworker.
@@ -122,6 +123,8 @@ const workers: Worker[] = [];
 const load: number[] = [];
 
 function dispatch(): void {
+  // Once asked to stop, folders found by the jobs still in flight are not followed.
+  if (cancelled || stopping) stackIds.length = stackPaths.length = stackTops.length = 0;
   for (let w = 0; w < workers.length; w++) {
     while (load[w] < IN_FLIGHT && stackIds.length > 0) {
       const take = Math.min(BATCH, stackIds.length);
@@ -210,7 +213,7 @@ function onResult(w: number, res: DirResult): void {
     port.postMessage({ type: "progress", progress: progress() });
   }
   // Never let the preview take more than about a tenth of the scan's time.
-  if (!cancelled && !job.quiet && now - lastLive > Math.max(900, liveCost * 10)) live();
+  if (!cancelled && !stopping && !job.quiet && now - lastLive > Math.max(900, liveCost * 10)) live();
   dispatch();
 }
 
@@ -439,12 +442,13 @@ function finish(): void {
     dirs: dirCount,
     errors: errorCount,
     errorSamples: issues,
+    incomplete: stopping || undefined,
   };
 
   if (process.env.DISKPLOT_TIMING) console.error("walk", walkMs, "finalize", Date.now() - startedAt - walkMs);
   let snapshot: SnapshotMeta | null = null;
   try {
-    if (!job.quiet) snapshot = writeSnapshot(job.snapshotDir, table);
+    if (!job.quiet && !stopping) snapshot = writeSnapshot(job.snapshotDir, table);
   } catch {
     // A scan is still useful without its snapshot.
   }
@@ -481,8 +485,10 @@ for (let w = 0; w < poolSize; w++) {
 
 // Stop on request: let the jobs in flight come back, then leave quietly.
 port.on("message", (msg: { type: string }) => {
-  if (msg.type !== "cancel" || finished) return;
-  cancelled = true;
+  if (finished || (msg.type !== "cancel" && msg.type !== "stop")) return;
+  // "stop" finishes with what there is; "cancel" throws it away.
+  if (msg.type === "stop") stopping = true;
+  else cancelled = true;
   stackIds.length = stackPaths.length = stackTops.length = 0;
   if (ready === poolSize) dispatch();
 });

@@ -32,6 +32,7 @@ const api = {
 
   startScan: (root: string): Promise<{ ok: boolean; root?: string; error?: string }> =>
     ipcRenderer.invoke("scan:start", root),
+  stopScan: (): Promise<void> => ipcRenderer.invoke("scan:stop"),
   cancelScan: (): Promise<void> => ipcRenderer.invoke("scan:cancel"),
   onScanProgress: (cb: (p: ScanProgress) => void) => on("scan:progress", cb),
   onScanPartial: (cb: (t: ScanTable) => void) => on("scan:partial", cb),
@@ -59,6 +60,8 @@ const api = {
   setClip: (paths: string[], cut: boolean): Promise<void> => ipcRenderer.invoke("clip:set", paths, cut),
   getClip: (): Promise<FileClip | null> => ipcRenderer.invoke("clip:get"),
   paste: (paths: string[], cut: boolean, destDir: string): Promise<PasteResult[]> => ipcRenderer.invoke("fs:paste", paths, cut, destDir),
+
+  onPasteProgress: (cb: (p: { done: number; total: number }) => void) => on("paste:progress", cb),
 
   newWindow: (root?: string): Promise<void> => ipcRenderer.invoke("win:new", root),
   closeWindow: (): Promise<void> => ipcRenderer.invoke("win:close"),

@@ -27,6 +27,7 @@ export interface ScanTable {
   dirs: number;
   errors: number;
   errorSamples: ScanIssue[];
+  incomplete?: boolean; // the scan was stopped before the end
 }
 
 export interface ScanIssue {
