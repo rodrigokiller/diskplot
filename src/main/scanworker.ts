@@ -212,8 +212,8 @@ function onResult(w: number, res: DirResult): void {
     lastProgress = now;
     port.postMessage({ type: "progress", progress: progress() });
   }
-  // Never let the preview take more than about a tenth of the scan's time.
-  if (!cancelled && !stopping && !job.quiet && now - lastLive > Math.max(900, liveCost * 10)) live();
+  // Often enough for the plan to keep moving, never more than about a tenth of the scan's time.
+  if (!cancelled && !stopping && !job.quiet && now - lastLive > Math.max(380, liveCost * 10)) live();
   dispatch();
 }
 
