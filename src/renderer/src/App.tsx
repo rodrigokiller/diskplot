@@ -22,7 +22,7 @@ type Tab = "tree" | "largest" | "types" | "clutter" | "dupes" | "changes" | "fou
 type Phase = { is: "start" } | { is: "scanning"; root: string } | { is: "failed"; root: string; error: string } | { is: "ready" };
 
 const MB = 1024 * 1024;
-const SITE = "https://diskplot.vercel.app/";
+const SITE = "https://www.diskplot.com/";
 const REPO = "https://github.com/rodrigokiller/diskplot";
 const AUTHOR_SITE = "https://sanguanini.dev";
 const DUP_IDLE: DupState = { status: "idle", progress: null, groups: [] };

@@ -4,7 +4,7 @@
   "description": "See what is filling your disk. A treemap and a tree, side by side.",
   "author": "Rodrigo Sanguanini",
   "license": "MIT",
-  "homepage": "https://diskplot.vercel.app/",
+  "homepage": "https://www.diskplot.com/",
   "repository": {
     "type": "git",
     "url": "https://github.com/rodrigokiller/diskplot.git"

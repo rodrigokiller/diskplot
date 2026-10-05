@@ -2,7 +2,7 @@
 // languages cannot drift apart. Run with: npm run site:build
 import { mkdirSync, writeFileSync } from "node:fs";
 
-const BASE = "https://diskplot.vercel.app/";
+const BASE = "https://www.diskplot.com/";
 const REPO = "https://github.com/rodrigokiller/diskplot";
 const RELEASES = REPO + "/releases";
 
