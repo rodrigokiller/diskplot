@@ -35,7 +35,7 @@
   --t1: oklch(0.925 0.028 168);
   --t2: oklch(0.845 0.052 168);
   --t3: oklch(0.71 0.082 168);
-  --t4: oklch(0.55 0.094 169);
+  --t4: oklch(0.5 0.094 169);
   --t5: oklch(0.39 0.078 171);
   --on-weak: oklch(0.26 0.04 170);
   --on-strong: oklch(0.97 0.012 165);
@@ -348,7 +348,6 @@ h3 {
 .cell.file small {
   display: block;
   font-size: inherit;
-  opacity: 0.8;
 }
 .cell.v1 {
   background: var(--t1);
@@ -452,7 +451,7 @@ section {
 
 .split {
   display: grid;
-  grid-template-columns: minmax(0, 5fr) minmax(0, 7fr);
+  grid-template-columns: minmax(0, 7fr) minmax(0, 5fr);
   gap: clamp(24px, 5vw, 72px);
   align-items: start;
 }

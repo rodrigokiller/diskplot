@@ -100,7 +100,7 @@
           <div>
             <p>
               O Diskplot desenha a unidade do jeito que um arquiteto desenha uma planta baixa.
-              <strong>Cada pasta é um cômodo, do tamanho do que ela guarda.</strong> O que pesa mais aparece mais escuro.
+              <strong>Cada pasta é um cômodo, do tamanho do que ela guarda.</strong> O que pesa mais leva a tinta mais forte.
             </p>
             <div class="cta">
               <a class="btn" href="https://github.com/rodrigokiller/diskplot/releases/latest">
@@ -135,10 +135,12 @@
         </p>
         <figure class="shot">
           <picture>
+            <source srcset="../img/plan-dark-crop.png" media="(max-width: 600px) and (prefers-color-scheme: dark)" width="880" height="600" />
+            <source srcset="../img/plan-light-crop.png" media="(max-width: 600px)" width="880" height="600" />
             <source srcset="../img/plan-dark.png" media="(prefers-color-scheme: dark)" />
             <img src="../img/plan-light.png" width="1440" height="900" alt="Diskplot mostrando o treemap de uma unidade à esquerda e a árvore de pastas com tamanhos à direita" />
           </picture>
-          <figcaption>Um scan real. Uma tinta, cinco valores: quanto mais escuro o bloco, maior a fatia dele no que você está vendo.</figcaption>
+          <figcaption>Um scan real. Uma tinta, cinco valores: quanto mais forte o bloco, maior a fatia dele no que você está vendo.</figcaption>
         </figure>
       </section>
 
@@ -194,8 +196,11 @@
             </p>
           </div>
           <figure class="shot">
-            <img src="../img/clutter-light.png" width="1440" height="900" loading="lazy" alt="A aba de tralha listando pastas node_modules agrupadas como dependências instaladas, com os tamanhos" />
-            <figcaption>A aba de tralha em uma pasta de projetos (interface em inglês).</figcaption>
+            <picture>
+              <source srcset="../img/clutter-dark.png" media="(prefers-color-scheme: dark)" />
+              <img src="../img/clutter-light.png" width="580" height="600" loading="lazy" alt="A aba de tralha listando pastas node_modules agrupadas como dependências instaladas, com os tamanhos" />
+            </picture>
+            <figcaption>A aba de tralha na pasta do próprio Diskplot (interface em inglês).</figcaption>
           </figure>
         </div>
       </section>
