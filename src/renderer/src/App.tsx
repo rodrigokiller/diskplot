@@ -66,9 +66,9 @@ export function App() {
   const [panelWidth, setPanelWidth] = useState(() => {
     try {
       const w = Number(localStorage.getItem("panel"));
-      return w >= 320 && w <= 1200 ? w : 500;
+      return w >= 320 && w <= 1200 ? w : 580;
     } catch {
-      return 500;
+      return 580;
     }
   });
   const [planArea, setPlanArea] = useState(0);
@@ -703,11 +703,16 @@ export function App() {
                 <small>{t("block.in", { time: fmt.duration(disk.t.durationMs) })}</small>
               </span>
             </div>
-            {disk.t.errors > 0 && (
+            {disk.t.errors > 0 ? (
               <button className="tb-cell link" onClick={() => setDialog("issues")}>
                 <span className="k">{t("block.issues")}</span>
                 <span className="v">{fmt.count(disk.t.errors)}</span>
               </button>
+            ) : (
+              <div className="tb-cell">
+                <span className="k">{t("block.issues")}</span>
+                <span className="v">0</span>
+              </div>
             )}
             <div className="tb-cell grow">
               <span className="k">{t("block.selected")}</span>

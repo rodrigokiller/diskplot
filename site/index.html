@@ -98,7 +98,7 @@
           <div>
             <p>
               Diskplot draws a drive the way an architect draws a floor plan. <strong>Every folder is a room, sized by what it holds.</strong>
-              The heavy things are the dark ones.
+              The heaviest things get the strongest ink.
             </p>
             <div class="cta">
               <a class="btn" href="https://github.com/rodrigokiller/diskplot/releases/latest">
@@ -133,10 +133,12 @@
         </p>
         <figure class="shot">
           <picture>
+            <source srcset="img/plan-dark-crop.png" media="(max-width: 600px) and (prefers-color-scheme: dark)" width="880" height="600" />
+            <source srcset="img/plan-light-crop.png" media="(max-width: 600px)" width="880" height="600" />
             <source srcset="img/plan-dark.png" media="(prefers-color-scheme: dark)" />
             <img src="img/plan-light.png" width="1440" height="900" alt="Diskplot showing a treemap of a drive on the left and a tree of folders with sizes on the right" />
           </picture>
-          <figcaption>A real scan. One ink, five values: the darker the block, the larger its share of what you are looking at.</figcaption>
+          <figcaption>A real scan. One ink, five values: the stronger the block, the larger its share of what you are looking at.</figcaption>
         </figure>
       </section>
 
@@ -192,8 +194,11 @@
             </p>
           </div>
           <figure class="shot">
-            <img src="img/clutter-light.png" width="1440" height="900" loading="lazy" alt="The Clutter tab listing node_modules folders grouped under installed dependencies with their sizes" />
-            <figcaption>The Clutter tab on a folder of projects.</figcaption>
+            <picture>
+              <source srcset="img/clutter-dark.png" media="(prefers-color-scheme: dark)" />
+              <img src="img/clutter-light.png" width="580" height="600" loading="lazy" alt="The Clutter tab listing node_modules folders grouped under installed dependencies with their sizes" />
+            </picture>
+            <figcaption>The Clutter tab on the folder that holds Diskplot itself.</figcaption>
           </figure>
         </div>
       </section>

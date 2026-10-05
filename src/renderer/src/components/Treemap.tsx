@@ -116,9 +116,7 @@ function drawPlan(
         const name = fit(ctx, disk.name(id), w - 10);
         if (h >= 34) {
           ctx.fillText(name, x0 + 5, y0 + 11);
-          ctx.globalAlpha = 0.8;
           ctx.fillText(fit(ctx, fmt.bytes(disk.size(id)), w - 10), x0 + 5, y0 + 25);
-          ctx.globalAlpha = 1;
         } else {
           ctx.fillText(name, x0 + 5, y0 + Math.min(h / 2, 11));
         }
