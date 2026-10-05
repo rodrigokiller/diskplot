@@ -9,6 +9,19 @@ const FONT = '12px "Barlow", "Bahnschrift", "Segoe UI", sans-serif';
 const MARK_FLOOR = 4 * 1024 * 1024;
 const ZOOM_MS = 280;
 const FADE_MS = 260;
+const MORPH_MS = 480;
+// Above this many blocks a frame takes too long to redraw; the change dissolves instead.
+const MORPH_MAX = 14000;
+
+// What is on the sheet right now, block by block, so the next drawing can start from it.
+interface Shown {
+  count: number;
+  key: Float64Array;
+  x: Float32Array;
+  y: Float32Array;
+  w: Float32Array;
+  h: Float32Array;
+}
 
 interface Colors {
   paper: string;
@@ -142,7 +155,7 @@ function drawPlan(
           ctx.fillRect(x0, y0, Math.max(1, w - 1), Math.max(1, h - 1));
         }
       }
-      if (kind === K_DIR_LABELLED) {
+      if (kind === K_DIR_LABELLED && h >= HEADER && w >= 30) {
         const mid = y0 + HEADER / 2 + 1;
         const size = grew ? fmt.signedBytes(delta![id]) : fmt.bytes(disk.size(id));
         const sizeW = w >= 150 ? ctx.measureText(size).width : 0;
@@ -215,6 +228,7 @@ export const Treemap = memo(function Treemap(p: Props) {
   });
   const anim = useRef(0);
   const wheelAt = useRef(0);
+  const shown = useRef<Shown | null>(null);
   const { disk, zoom, fmt, t, onArea } = p;
 
   useLayoutEffect(() => {
@@ -272,7 +286,78 @@ export const Treemap = memo(function Treemap(p: Props) {
     if (cv.height !== H) cv.height = H;
     const ctx = cv.getContext("2d")!;
     const colors = readColors();
-    drawPlan(ctx, layout, disk, zoom, colors, dpr, fmt, delta);
+
+    // Each block is known by its path, so it can be followed from the last
+    // drawing to this one even when the scan handed over a whole new table.
+    const n = layout.count;
+    const keys = new Float64Array(n);
+    for (let i = 0; i < n; i++) keys[i] = disk.pathKey(layout.id[i]) + (layout.kind[i] === K_REST ? 0.5 : 0);
+    const before = shown.current;
+    const morphing = refreshed && !still && before !== null && n <= MORPH_MAX && before.count <= MORPH_MAX;
+
+    if (morphing && before) {
+      // Blocks that were already there travel from where they stood. A new
+      // one grows from nothing, at the spot it takes inside its folder.
+      const where = new Map<number, number>();
+      for (let i = 0; i < before.count; i++) where.set(before.key[i], i);
+      const sx = new Float32Array(n);
+      const sy = new Float32Array(n);
+      const sw = new Float32Array(n);
+      const sh = new Float32Array(n);
+      const chain: number[] = []; // the open folder at each depth
+      for (let i = 0; i < n; i++) {
+        const depth = layout.depth[i];
+        chain[depth] = i;
+        const o = where.get(keys[i]);
+        if (o !== undefined) {
+          sx[i] = before.x[o];
+          sy[i] = before.y[o];
+          sw[i] = before.w[o];
+          sh[i] = before.h[o];
+          continue;
+        }
+        const cx = layout.x[i] + layout.w[i] / 2;
+        const cy = layout.y[i] + layout.h[i] / 2;
+        const p = depth > 0 ? chain[depth - 1] : -1;
+        if (p >= 0 && layout.w[p] > 0 && layout.h[p] > 0) {
+          sx[i] = sx[p] + ((cx - layout.x[p]) * sw[p]) / layout.w[p];
+          sy[i] = sy[p] + ((cy - layout.y[p]) * sh[p]) / layout.h[p];
+        } else {
+          sx[i] = cx;
+          sy[i] = cy;
+        }
+      }
+      const frame: Layout = {
+        count: n,
+        id: layout.id,
+        depth: layout.depth,
+        kind: layout.kind,
+        x: new Float32Array(n),
+        y: new Float32Array(n),
+        w: new Float32Array(n),
+        h: new Float32Array(n),
+      };
+      shown.current = { count: n, key: keys, x: frame.x, y: frame.y, w: frame.w, h: frame.h };
+      const start = performance.now();
+      const step = (now: number): void => {
+        const k = Math.min(1, (now - start) / MORPH_MS);
+        const e = 1 - Math.pow(1 - k, 3);
+        for (let i = 0; i < n; i++) {
+          frame.x[i] = sx[i] + (layout.x[i] - sx[i]) * e;
+          frame.y[i] = sy[i] + (layout.y[i] - sy[i]) * e;
+          frame.w[i] = sw[i] + (layout.w[i] - sw[i]) * e;
+          frame.h[i] = sh[i] + (layout.h[i] - sh[i]) * e;
+        }
+        drawPlan(ctx, frame, disk, zoom, colors, dpr, fmt, delta);
+        if (k < 1) anim.current = requestAnimationFrame(step);
+      };
+      step(start);
+      if (MORPH_MS > 0) anim.current = requestAnimationFrame(step);
+      from = null;
+    } else {
+      drawPlan(ctx, layout, disk, zoom, colors, dpr, fmt, delta);
+      shown.current = { count: n, key: keys, x: layout.x, y: layout.y, w: layout.w, h: layout.h };
+    }
 
     if (from && refreshed) {
       const to = document.createElement("canvas");

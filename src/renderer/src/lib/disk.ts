@@ -256,6 +256,27 @@ export class Disk {
     }
   }
 
+  // A number that stands for a node's path. Two scans of the same place give
+  // the same number to the same item even though their ids differ, which is
+  // what lets the plan follow a block from one drawing to the next.
+  private keys = new Map<number, number>();
+  pathKey(id: number): number {
+    if (id <= 0) return 1;
+    let k = this.keys.get(id);
+    if (k !== undefined) return k;
+    const pk = this.pathKey(this.t.parent[id]);
+    let h1 = (pk ^ 0x811c9dc5) >>> 0;
+    let h2 = (Math.floor(pk / 4294967296) + 0x9e3779b1) >>> 0;
+    const names = this.t.names;
+    for (let i = this.t.nameOff[id], e = this.t.nameOff[id + 1]; i < e; i++) {
+      h1 = Math.imul(h1 ^ names[i], 16777619) >>> 0;
+      h2 = (Math.imul(h2, 31) + names[i]) >>> 0;
+    }
+    k = (h2 & 0xfffff) * 4294967296 + h1;
+    this.keys.set(id, k);
+    return k;
+  }
+
   // Root first, the node itself last.
   ancestors(id: number): number[] {
     const out: number[] = [];
