@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://rodrigokiller.github.io/diskplot/sitemap.xml
