@@ -12,6 +12,7 @@ It is free, MIT licensed, and has no account, no ads and no telemetry.
 
 I have used SpaceSniffer for years for its map and WizTree for its tree, usually both in the same afternoon. Diskplot is the two views in one window, plus a few things I kept wishing for:
 
+- **Live.** Switch on Live after a scan and the map follows the disk as files come and go, without scanning again.
 - **Changes.** Each scan leaves a small snapshot. Scan the same place again later and you get a list of what grew, what is new and what is gone.
 - **Clutter.** `node_modules`, build output, package manager caches, virtual environments, temp folders and browser caches are recognised and totalled.
 - **Find.** Search by name across the whole scan as you type, and narrow by minimum size, age or file type.

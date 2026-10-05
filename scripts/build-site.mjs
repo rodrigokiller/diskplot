@@ -43,6 +43,7 @@ const en = {
     h: "Features",
     rows: [
       ["Live view", "The treemap and the tree fill in while the scan runs. There is no waiting for a progress bar to finish."],
+      ["Live sync", "Switch it on after a scan and the treemap follows the disk: new, changed and removed files show up within a second or two, without scanning again."],
       ["Scan comparison", "Each scan saves a small snapshot. The next scan of the same location lists what grew, what is new and what is gone."],
       ["Clutter detection", "Recognises node_modules, build output, package manager caches, virtual environments, temp folders and browser caches, and totals them."],
       ["Search and filters", "Search by name across the whole scan as you type. Filter by minimum size, by age or by file type."],
@@ -130,6 +131,7 @@ const pt = {
     h: "Recursos",
     rows: [
       ["Vista ao vivo", "O treemap e a árvore vão sendo preenchidos enquanto o scan roda. Não é preciso esperar uma barra de progresso terminar."],
+      ["Sincronia ao vivo", "Ligue depois de um scan e o treemap acompanha o disco: arquivos novos, alterados e removidos aparecem em um ou dois segundos, sem escanear de novo."],
       ["Comparação de scans", "Cada scan salva um pequeno retrato. O próximo scan do mesmo local lista o que cresceu, o que é novo e o que sumiu."],
       ["Limpeza", "Reconhece node_modules, saída de build, caches de gerenciadores de pacotes, ambientes virtuais, pastas temporárias e caches de navegador, e soma tudo."],
       ["Busca e filtros", "Busca por nome no scan inteiro enquanto você digita. Filtros por tamanho mínimo, por idade e por tipo de arquivo."],

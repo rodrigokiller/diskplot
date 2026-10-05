@@ -9,6 +9,7 @@ import type {
   ItemStat,
   Measured,
   PasteResult,
+  WatchBatch,
   WindowInfo,
   ScanProgress,
   ScanTable,
@@ -62,6 +63,12 @@ const api = {
   paste: (paths: string[], cut: boolean, destDir: string): Promise<PasteResult[]> => ipcRenderer.invoke("fs:paste", paths, cut, destDir),
 
   onPasteProgress: (cb: (p: { done: number; total: number }) => void) => on("paste:progress", cb),
+
+  startWatch: (root: string): Promise<void> => ipcRenderer.invoke("watch:start", root),
+  stopWatch: (): Promise<void> => ipcRenderer.invoke("watch:stop"),
+  onWatchChanges: (cb: (batch: WatchBatch) => void) => on("watch:changes", cb),
+  onWatchLost: (cb: () => void) => on("watch:lost", cb),
+  saveSnapshot: (reduced: import("../shared/reduce").Reduced): Promise<SnapshotMeta | null> => ipcRenderer.invoke("snap:save", reduced),
 
   newWindow: (root?: string): Promise<void> => ipcRenderer.invoke("win:new", root),
   closeWindow: (): Promise<void> => ipcRenderer.invoke("win:close"),

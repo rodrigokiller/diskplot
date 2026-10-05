@@ -374,6 +374,20 @@ p {
   border-color: var(--red);
   color: var(--on-red);
 }
+.btn.on {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
+}
+.btn.on .pulse {
+  background: var(--red);
+}
+.pulse {
+  width: 8px;
+  height: 8px;
+  background: var(--line-strong);
+  flex: none;
+}
 .btn.quiet {
   border-color: transparent;
   background: none;

@@ -94,6 +94,20 @@ export interface TrashResult {
   error?: string;
 }
 
+// One batch of folders that changed on disk, listed again. The arrays are the
+// same ones a folder worker returns during a scan.
+export interface WatchBatch {
+  paths: string[];
+  counts: Uint32Array;
+  failed: [number, string][];
+  nameLens: Uint16Array;
+  names: Uint8Array;
+  sizes: Float64Array;
+  logical: Float64Array;
+  mtimes: Uint32Array;
+  flags: Uint8Array;
+}
+
 export interface WindowInfo {
   id: number;
   title: string;

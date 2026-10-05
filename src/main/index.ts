@@ -3,12 +3,15 @@ import type { IpcMainInvokeEvent } from "electron";
 import { copyFile, lstat, mkdir, readdir, readlink, rename, rm, stat, statfs, symlink } from "fs/promises";
 import { createReadStream, createWriteStream } from "fs";
 import { pipeline } from "stream/promises";
-import { existsSync } from "fs";
+import { existsSync, watch as watchFs } from "fs";
+import type { FSWatcher } from "fs";
 import { execFile } from "child_process";
 import { basename, dirname, extname, join, resolve, sep } from "path";
 import { Worker } from "worker_threads";
 import { autoUpdater } from "electron-updater";
-import { listSnapshots, readSnapshot } from "./snapshots";
+import { listSnapshots, readSnapshot, storeSnapshot } from "./snapshots";
+import type { Reduced } from "../shared/reduce";
+import type { DirResult } from "./dirworker";
 import type {
   DriveInfo,
   DupCandidate,
@@ -29,6 +32,17 @@ interface Session {
   win: BrowserWindow;
   scan: Worker | null;
   dup: Worker | null;
+  watch: Watch | null;
+}
+
+// Live sync: the system reports which folders changed and only those are
+// listed again.
+interface Watch {
+  watcher: FSWatcher;
+  lister: Worker;
+  dirty: Set<string>;
+  batch: string[] | null; // being listed right now
+  timer: NodeJS.Timeout | null;
 }
 const sessions = new Map<number, Session>(); // by webContents id
 
@@ -71,13 +85,14 @@ function createWindow(root?: string): void {
     },
   });
   const id = win.webContents.id;
-  const session: Session = { win, scan: null, dup: null };
+  const session: Session = { win, scan: null, dup: null, watch: null };
   sessions.set(id, session);
 
   win.once("ready-to-show", () => win.show());
   win.on("closed", () => {
     stopScan(session);
     stopDup(session);
+    stopWatch(session);
     sessions.delete(id);
     announceWindows();
   });
@@ -117,6 +132,83 @@ function stopDup(s: Session): void {
     void w.terminate();
   }
 }
+
+function stopWatch(s: Session): void {
+  const w = s.watch;
+  if (!w) return;
+  s.watch = null;
+  if (w.timer) clearTimeout(w.timer);
+  w.watcher.close();
+  w.lister.postMessage({ exit: true });
+}
+
+const WATCH_DELAY = 900; // let a burst of changes settle
+const WATCH_BATCH = 300; // folders listed per round
+
+function startWatch(s: Session, root: string): void {
+  stopWatch(s);
+  const lister = new Worker(join(__dirname, "dirworker.js"));
+  let seq = 0;
+  const flush = (): void => {
+    const w = s.watch;
+    if (!w || w.batch) return;
+    w.timer = null;
+    // Shallow folders first: a change near the top matters most on the plan.
+    const batch = [...w.dirty].sort((a, b) => a.length - b.length).slice(0, WATCH_BATCH);
+    for (const p of batch) w.dirty.delete(p);
+    if (batch.length === 0) return;
+    w.batch = batch;
+    lister.postMessage({ seq: seq++, paths: batch });
+  };
+  const schedule = (): void => {
+    const w = s.watch;
+    if (w && !w.timer && !w.batch) w.timer = setTimeout(flush, WATCH_DELAY);
+  };
+  lister.on("message", (res: DirResult | { ready: true }) => {
+    const w = s.watch;
+    if (!w || "ready" in res || !w.batch) return;
+    const { seq: _seq, ...arrays } = res;
+    send(s, "watch:changes", { paths: w.batch, ...arrays });
+    w.batch = null;
+    if (w.dirty.size > 0) schedule();
+  });
+  let watcher: FSWatcher;
+  try {
+    watcher = watchFs(root, { recursive: true }, (_event, name) => {
+      const w = s.watch;
+      if (!w || !name) return;
+      // What changed is the folder that holds the name.
+      w.dirty.add(dirname(join(root, String(name))));
+      schedule();
+    });
+  } catch {
+    lister.postMessage({ exit: true });
+    send(s, "watch:lost");
+    return;
+  }
+  // Windows gives up when changes come faster than they can be reported.
+  watcher.on("error", () => {
+    stopWatch(s);
+    send(s, "watch:lost");
+  });
+  s.watch = { watcher, lister, dirty: new Set(), batch: null, timer: null };
+}
+
+ipcMain.handle("watch:start", (e, root: string) => {
+  const s = sessionOf(e);
+  if (s) startWatch(s, resolve(String(root)));
+});
+ipcMain.handle("watch:stop", (e) => {
+  const s = sessionOf(e);
+  if (s) stopWatch(s);
+});
+ipcMain.handle("snap:save", (_e, reduced: Reduced) => {
+  try {
+    return storeSnapshot(snapshotDir(), reduced);
+  } catch {
+    return null;
+  }
+});
 
 // Drives ------------------------------------------------------------------
 
@@ -159,6 +251,7 @@ ipcMain.handle("scan:start", (e, rootArg: string) => {
   if (!s) return { ok: false, error: "ENOWINDOW" };
   stopScan(s);
   stopDup(s);
+  stopWatch(s);
   const root = resolve(String(rootArg));
   if (!existsSync(root)) return { ok: false, error: "ENOENT" };
 

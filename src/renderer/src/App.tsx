@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import type { DriveInfo, ItemStat, ScanProgress, ScanTable, SnapshotMeta, UpdateStatus, WindowInfo } from "../../shared/types";
+import { F_DIR } from "../../shared/types";
+import { reduceTable } from "../../shared/reduce";
+import type { DriveInfo, ItemStat, ScanProgress, WatchBatch, ScanTable, SnapshotMeta, UpdateStatus, WindowInfo } from "../../shared/types";
 import { Disk } from "./lib/disk";
+import type { Graftable } from "./lib/disk";
 import { NO_FILTER, compare, isFiltering, runFilter, topFiles } from "./lib/analysis";
 import type { Comparison, Filter } from "./lib/analysis";
 import { initialLang, makeFmt, makeT } from "./lib/i18n";
@@ -98,6 +101,9 @@ export function App() {
   const [dialog, setDialog] = useState<"issues" | "about" | "keys" | null>(null);
   const [notice, setNotice] = useState<{ text: string; bad?: boolean; progress?: number; action?: { label: string; run: () => void } } | null>(null);
   const [stopping, setStopping] = useState(false);
+  // Live sync: the wish (remembered) and whether it had to give up on this scan.
+  const [sync, setSync] = useState(() => load("sync", ["on", "off"] as const, "off") === "on");
+  const [syncLost, setSyncLost] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
   const [dropping, setDropping] = useState(false);
   const [appVersion, setAppVersion] = useState("");
@@ -150,6 +156,7 @@ export function App() {
     setMenu(null);
     setProgress(null);
     setNotice(null);
+    setSyncLost(false);
     setDisk(null);
     setTab("tree");
     setPhase({ is: "scanning", root });
@@ -405,7 +412,9 @@ export function App() {
         }
       }
       const measured = await window.api.measure(r.dest);
-      if (measured.ok) last = disk.graft(dir, measured);
+      const seen = disk.findPath(r.dest);
+      if (seen >= 0) last = seen;
+      else if (measured.ok) last = disk.graft(dir, measured);
       done++;
     }
     setHover(-1);
@@ -490,6 +499,128 @@ export function App() {
     if (failed > 0) setNotice({ text: t("trash.failed", { count: failed }), bad: true });
   };
 
+  // Live sync ----------------------------------------------------------------
+  // While it is on, Windows reports the folders that change and only those
+  // are read again; the table is patched in place.
+
+  const synced = sync && !syncLost && phase.is === "ready" && disk !== null && !disk.t.incomplete;
+  useEffect(() => {
+    if (!synced || !disk) return;
+    const d = disk;
+    const decoder = new TextDecoder();
+    let queue: Promise<void> = Promise.resolve();
+    let alive = true;
+
+    const apply = async (b: WatchBatch): Promise<void> => {
+      if (!alive) return;
+      const failed = new Map(b.failed);
+      const adds: { parent: number; item: Graftable }[] = [];
+      const newDirs: { parent: number; path: string }[] = [];
+      let changed = false;
+      const drop = (id: number): void => {
+        if (d.contains(id, view.current.zoom)) setZoom(Math.max(0, d.parent(id)));
+        if (view.current.selected >= 0 && d.contains(id, view.current.selected)) setSelected(-1);
+        d.remove(id);
+        changed = true;
+      };
+      let e = 0;
+      let off = 0;
+      for (let k = 0; k < b.paths.length; k++) {
+        const count = b.counts[k];
+        const dir = d.findPath(b.paths[k]);
+        const code = failed.get(k);
+        if (code !== undefined) {
+          if (code === "ENOENT" && dir > 0) drop(dir); // the folder itself is gone
+          continue;
+        }
+        if (dir < 0 || !d.isDir(dir) || d.isLink(dir)) {
+          for (let j = 0; j < count; j++) off += b.nameLens[e++];
+          continue;
+        }
+        const have = new Map<string, number>();
+        for (const c of d.children(dir)) have.set(d.name(c).toLowerCase(), c);
+        const base = b.paths[k].endsWith(d.sep) ? b.paths[k] : b.paths[k] + d.sep;
+        for (let j = 0; j < count; j++, e++) {
+          const name = decoder.decode(b.names.subarray(off, off + b.nameLens[e]));
+          off += b.nameLens[e];
+          const isDir = (b.flags[e] & F_DIR) !== 0;
+          const key = name.toLowerCase();
+          let cur = have.get(key);
+          have.delete(key);
+          if (cur !== undefined && d.isDir(cur) !== isDir) {
+            drop(cur); // a file became a folder, or the reverse
+            cur = undefined;
+          }
+          if (cur === undefined) {
+            if (isDir) newDirs.push({ parent: dir, path: base + name });
+            else adds.push({ parent: dir, item: { kind: "file", name, size: b.sizes[e], logical: b.logical[e], mtime: b.mtimes[e], flags: b.flags[e] } });
+          } else if (!isDir && (d.size(cur) !== b.sizes[e] || d.logical(cur) !== b.logical[e] || d.t.mtime[cur] !== b.mtimes[e])) {
+            d.resize(cur, b.sizes[e], b.logical[e], b.mtimes[e]);
+            changed = true;
+          }
+        }
+        for (const id of have.values()) drop(id); // listed before, not there now
+      }
+      // A new folder has to be measured all the way down.
+      for (const nd of newDirs) {
+        const measured = await window.api.measure(nd.path);
+        if (!alive) return;
+        if (measured.ok) adds.push({ parent: nd.parent, item: measured });
+      }
+      // Measuring takes time; a paste may have added the same item meanwhile.
+      const names = new Map<number, Set<string>>();
+      const fresh = adds.filter((a) => {
+        if (d.isGone(a.parent)) return false;
+        if (newDirs.length === 0) return true;
+        let set = names.get(a.parent);
+        if (!set) {
+          set = new Set();
+          for (const c of d.children(a.parent)) set.add(d.name(c).toLowerCase());
+          names.set(a.parent, set);
+        }
+        const key = a.item.name.toLowerCase();
+        if (set.has(key)) return false;
+        set.add(key);
+        return true;
+      });
+      if (fresh.length > 0) {
+        d.graftAll(fresh);
+        changed = true;
+      }
+      if (changed) {
+        setHover(-1);
+        setVersion((v) => v + 1);
+      }
+    };
+
+    const offChanges = window.api.onWatchChanges((b) => {
+      queue = queue.then(() => apply(b)).catch(() => undefined);
+    });
+    const offLost = window.api.onWatchLost(() => {
+      setSyncLost(true);
+      setNotice({ text: t("live.lost"), bad: true, action: { label: t("menu.rescan"), run: () => startScan(d.t.root) } });
+    });
+    void window.api.startWatch(d.t.root);
+    return () => {
+      alive = false;
+      offChanges();
+      offLost();
+      void window.api.stopWatch();
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [synced, disk]);
+
+  const toggleSync = (): void => {
+    const next = !(sync && !syncLost);
+    // Switching it off records where the disk stands now.
+    if (!next && synced && disk) {
+      void window.api.saveSnapshot(reduceTable(disk.t, Date.now())).then((meta) => meta && setNotice({ text: t("live.saved") }));
+    }
+    setSyncLost(false);
+    setSync(next);
+    save("sync", next ? "on" : "off");
+  };
+
   // Menus ------------------------------------------------------------------
 
   const ready = phase.is === "ready" && disk !== null;
@@ -510,6 +641,8 @@ export function App() {
       { label: t("menu.zoomRoot"), disabled: !nav || zoom === 0, run: () => zoomTo(0) },
       { label: t("menu.back"), icon: "back", keys: "Alt+Left", disabled: !nav || trail.back.length === 0, run: () => step("back") },
       { label: t("menu.forward"), icon: "forward", keys: "Alt+Right", disabled: !nav || trail.forward.length === 0, run: () => step("forward") },
+      { kind: "sep" },
+      { label: t("live.title"), checked: sync && !syncLost, run: toggleSync },
       { kind: "sep" },
       { kind: "title", label: t("menu.levels") },
       ...LEVELS.map(
@@ -914,6 +1047,16 @@ export function App() {
               {t("menu.rescan")}
             </button>
             <button
+              className={"btn" + (synced ? " on" : "")}
+              aria-pressed={synced}
+              disabled={disk.t.incomplete}
+              title={t("live.title")}
+              onClick={toggleSync}
+            >
+              <span className="pulse" />
+              {t("live.button")}
+            </button>
+            <button
               className="btn icon"
               disabled={trail.back.length === 0}
               title={t("menu.back") + " (Alt+Left)"}
@@ -1088,7 +1231,7 @@ export function App() {
             <div className="tb-cell">
               <span className="k">{t("block.scanned")}</span>
               <span className="v">
-                {live ? t("scan.running") : disk.t.incomplete ? t("scan.stoppedShort") : fmt.when(disk.t.startedAt)}
+                {live ? t("scan.running") : disk.t.incomplete ? t("scan.stoppedShort") : synced ? t("live.short") : fmt.when(disk.t.startedAt)}
                 <small>{t("block.in", { time: fmt.duration(disk.t.durationMs) })}</small>
               </span>
             </div>

@@ -4,10 +4,10 @@ import { createHash } from "crypto";
 import { existsSync, mkdirSync, readFileSync, readdirSync, unlinkSync, writeFileSync } from "fs";
 import { join } from "path";
 import { gunzipSync, gzipSync } from "zlib";
-import { F_DIR } from "../shared/types";
+import { reduceTable } from "../shared/reduce";
+import type { Reduced } from "../shared/reduce";
 import type { ScanTable, SnapshotMeta, SnapshotTable } from "../shared/types";
 
-const BIG_FILE = 8 * 1024 * 1024;
 const KEEP_PER_ROOT = 8;
 
 function rootKey(root: string): string {
@@ -15,51 +15,30 @@ function rootKey(root: string): string {
 }
 
 export function writeSnapshot(dir: string, t: ScanTable): SnapshotMeta {
+  return storeSnapshot(dir, reduceTable(t, t.startedAt));
+}
+
+export function storeSnapshot(dir: string, r: Reduced): SnapshotMeta {
   mkdirSync(dir, { recursive: true });
-
-  const remap = new Int32Array(t.n).fill(-1);
-  let n = 0;
-  let nameBytes = 0;
-  for (let i = 0; i < t.n; i++) {
-    if (i === 0 || t.flags[i] & F_DIR || t.size[i] >= BIG_FILE) {
-      remap[i] = n++;
-      nameBytes += t.nameOff[i + 1] - t.nameOff[i];
-    }
-  }
-  const parent = new Int32Array(n);
-  const size = new Float64Array(n);
-  const flags = new Uint8Array(n);
-  const nameOff = new Uint32Array(n + 1);
-  const names = new Uint8Array(nameBytes);
-  let off = 0;
-  for (let i = 0; i < t.n; i++) {
-    const j = remap[i];
-    if (j === -1) continue;
-    parent[j] = i === 0 ? -1 : remap[t.parent[i]];
-    size[j] = t.size[i];
-    flags[j] = t.flags[i];
-    names.set(t.names.subarray(t.nameOff[i], t.nameOff[i + 1]), off);
-    off += t.nameOff[i + 1] - t.nameOff[i];
-    nameOff[j + 1] = off;
-  }
-
-  const file = `${rootKey(t.root)}-${t.startedAt}.dps`;
-  const meta: SnapshotMeta = { file, root: t.root, date: t.startedAt, total: t.size[0], files: t.files[0] };
-  const header = Buffer.from(JSON.stringify({ v: 1, meta, n, nameBytes }), "utf8");
+  const { n, parent, size, flags, nameOff, names } = r;
+  const bytes = (a: ArrayBufferView): Buffer => Buffer.from(a.buffer, a.byteOffset, a.byteLength);
+  const file = `${rootKey(r.meta.root)}-${r.meta.date}.dps`;
+  const meta: SnapshotMeta = { file, ...r.meta };
+  const header = Buffer.from(JSON.stringify({ v: 1, meta, n, nameBytes: names.length }), "utf8");
   const head = Buffer.alloc(4);
   head.writeUInt32LE(header.length, 0);
   const body = Buffer.concat([
     head,
     header,
-    Buffer.from(parent.buffer),
-    Buffer.from(size.buffer),
-    Buffer.from(flags.buffer),
-    Buffer.from(nameOff.buffer),
-    Buffer.from(names.buffer),
+    bytes(parent),
+    bytes(size),
+    bytes(flags),
+    bytes(nameOff),
+    bytes(names),
   ]);
   writeFileSync(join(dir, file), gzipSync(body, { level: 3 }));
   writeFileSync(join(dir, file + ".json"), JSON.stringify(meta));
-  prune(dir, t.root);
+  prune(dir, r.meta.root);
   return meta;
 }
 
