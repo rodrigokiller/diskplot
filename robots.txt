@@ -1,4 +1,4 @@
 User-agent: *
 Allow: /
 
-Sitemap: https://rodrigokiller.github.io/diskplot/sitemap.xml
+Sitemap: https://diskplot.vercel.app/sitemap.xml

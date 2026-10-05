@@ -5,7 +5,7 @@
   var crumbs = document.getElementById("crumbs");
   if (!plan || !crumbs) return;
   var pt = document.documentElement.lang.indexOf("pt") === 0;
-  var hint = pt ? "Clique em uma pasta para abrir" : "Click a folder to open it";
+  var hint = "";
 
   // [name, GB] for a file, [name, [children]] for a folder. Example data.
   var DATA = ["C:", [

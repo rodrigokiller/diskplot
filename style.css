@@ -1,4 +1,4 @@
-/* diskplot site. Same sheet, ink and lettering as the app. */
+/* diskplot site. White sheet, black line, one blue, the same as the app's Grid theme. */
 
 @font-face {
   font-family: "Barlow";
@@ -26,20 +26,22 @@
 }
 
 :root {
-  --paper: oklch(0.972 0.006 165);
-  --panel: oklch(0.95 0.008 165);
-  --ink: oklch(0.24 0.025 170);
-  --ink-2: oklch(0.43 0.025 170);
-  --line: oklch(0.87 0.012 168);
-  --line-strong: oklch(0.7 0.02 168);
-  --t1: oklch(0.925 0.028 168);
-  --t2: oklch(0.845 0.052 168);
-  --t3: oklch(0.71 0.082 168);
-  --t4: oklch(0.47 0.094 169);
-  --t5: oklch(0.39 0.078 171);
-  --on-weak: oklch(0.26 0.04 170);
-  --on-strong: oklch(0.97 0.012 165);
-  --red: oklch(0.55 0.19 30);
+  --paper: oklch(1 0 0);
+  --panel: oklch(0.972 0.008 268);
+  --ink: oklch(0.18 0.005 268);
+  --ink-2: oklch(0.42 0.012 268);
+  --line: oklch(0.9 0.03 270);
+  --line-strong: oklch(0.66 0.07 270);
+  --t1: oklch(0.935 0.032 270);
+  --t2: oklch(0.85 0.07 270);
+  --t3: oklch(0.73 0.115 269);
+  --t4: oklch(0.5 0.2 266);
+  --t5: oklch(0.4 0.21 265);
+  --on-weak: oklch(0.22 0.06 268);
+  --on-strong: oklch(0.985 0.005 268);
+  --plane: oklch(0.45 0.21 265);
+  --on-plane: oklch(0.99 0.004 268);
+  --red: oklch(0.56 0.21 28);
   --ease: cubic-bezier(0.16, 1, 0.3, 1);
   --gutter: clamp(16px, 4vw, 48px);
   --text: "Barlow", "Bahnschrift", "Segoe UI", system-ui, sans-serif;
@@ -49,20 +51,22 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --paper: oklch(0.195 0.012 170);
-    --panel: oklch(0.23 0.014 170);
-    --ink: oklch(0.93 0.012 165);
-    --ink-2: oklch(0.73 0.02 167);
-    --line: oklch(0.31 0.015 170);
-    --line-strong: oklch(0.45 0.022 170);
-    --t1: oklch(0.275 0.028 170);
-    --t2: oklch(0.36 0.05 170);
-    --t3: oklch(0.44 0.074 169);
-    --t4: oklch(0.68 0.094 168);
-    --t5: oklch(0.82 0.088 167);
-    --on-weak: oklch(0.93 0.02 165);
-    --on-strong: oklch(0.18 0.03 170);
-    --red: oklch(0.7 0.17 32);
+    --paper: oklch(0.17 0.012 268);
+    --panel: oklch(0.21 0.016 268);
+    --ink: oklch(0.95 0.006 268);
+    --ink-2: oklch(0.74 0.02 268);
+    --line: oklch(0.25 0.03 268);
+    --line-strong: oklch(0.45 0.06 268);
+    --t1: oklch(0.27 0.05 268);
+    --t2: oklch(0.35 0.09 267);
+    --t3: oklch(0.44 0.14 266);
+    --t4: oklch(0.68 0.13 268);
+    --t5: oklch(0.84 0.075 270);
+    --on-weak: oklch(0.94 0.02 268);
+    --on-strong: oklch(0.17 0.04 268);
+    --plane: oklch(0.42 0.19 265);
+    --on-plane: oklch(0.99 0.004 268);
+    --red: oklch(0.7 0.18 30);
   }
 }
 
@@ -131,7 +135,7 @@ h2 {
   text-wrap: balance;
 }
 h1 {
-  font-size: clamp(2.7rem, 7.2vw, 5.6rem);
+  font-size: clamp(2.5rem, 6vw, 4.6rem);
 }
 h2 {
   font-size: clamp(1.9rem, 3.6vw, 3rem);
@@ -202,9 +206,9 @@ h3 {
     color 140ms var(--ease);
 }
 .btn:hover {
-  background: var(--t5);
-  border-color: var(--t5);
-  color: var(--on-strong);
+  background: var(--plane);
+  border-color: var(--plane);
+  color: var(--on-plane);
 }
 .btn.line {
   background: none;
@@ -223,8 +227,22 @@ h3 {
 
 /* Hero ------------------------------------------------------------------- */
 
+.hero-band {
+  background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 24px 24px;
+  background-position: center top;
+  border-bottom: 1px solid var(--line-strong);
+  padding-bottom: clamp(32px, 5vw, 72px);
+}
 .hero {
   padding-top: clamp(28px, 5vw, 64px);
+}
+.hero-head h1,
+.hero-head > div {
+  background: var(--paper);
+  padding: 12px 16px 16px;
+  margin-left: -16px;
+  width: fit-content;
 }
 .hero-head {
   display: grid;
@@ -245,7 +263,7 @@ h3 {
   display: flex;
   flex-wrap: wrap;
   gap: 12px;
-  margin-top: 22px;
+  margin-top: 20px;
 }
 .fine {
   margin-top: 12px;
@@ -466,15 +484,14 @@ section {
 }
 .schedule > div {
   display: grid;
-  grid-template-columns: minmax(0, 4fr) minmax(0, 8fr);
-  gap: 8px 40px;
-  padding: 22px 0 24px;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 9fr);
+  gap: 4px 40px;
+  padding: 14px 0 16px;
   border-bottom: 1px solid var(--line-strong);
 }
 .schedule h3 {
-  font-family: var(--display);
-  font-size: 1.5rem;
-  line-height: 1.1;
+  font-size: 1.12rem;
+  line-height: 1.3;
 }
 .schedule p {
   max-width: 62ch;
@@ -583,8 +600,8 @@ tr:last-child td {
 
 .close {
   margin-top: clamp(72px, 10vw, 140px);
-  background: var(--ink);
-  color: var(--paper);
+  background: var(--plane);
+  color: var(--on-plane);
   padding: clamp(48px, 7vw, 96px) 0;
 }
 .close .wrap {
@@ -598,25 +615,30 @@ tr:last-child td {
   max-width: 16ch;
 }
 .close .btn {
-  background: var(--paper);
-  border-color: var(--paper);
-  color: var(--ink);
+  background: var(--on-plane);
+  border-color: var(--on-plane);
+  color: oklch(0.18 0.005 268);
 }
 .close .btn:hover {
-  background: var(--t2);
-  border-color: var(--t2);
-  color: var(--on-weak);
+  background: oklch(0.18 0.005 268);
+  border-color: oklch(0.18 0.005 268);
+  color: var(--on-plane);
 }
 .close .btn.line {
   background: none;
-  color: var(--paper);
+  color: var(--on-plane);
 }
 .close .btn.line:hover {
-  background: var(--paper);
-  color: var(--ink);
+  background: var(--on-plane);
+  border-color: var(--on-plane);
+  color: oklch(0.18 0.005 268);
 }
 .close :focus-visible {
-  outline-color: var(--paper);
+  outline-color: var(--on-plane);
+}
+.close p {
+  margin-top: 10px;
+  opacity: 0.85;
 }
 
 footer .wrap {
