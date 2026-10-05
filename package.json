@@ -1,6 +1,6 @@
 {
   "name": "diskplot",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "See what is filling your disk. A treemap and a tree, side by side.",
   "author": "Rodrigo Sanguanini",
   "license": "MIT",
