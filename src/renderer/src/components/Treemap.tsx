@@ -7,7 +7,7 @@ import type { Layout } from "../lib/treemap";
 
 const FONT = '12px "Barlow", "Bahnschrift", "Segoe UI", sans-serif';
 const MARK_FLOOR = 4 * 1024 * 1024;
-const ZOOM_MS = 170;
+const ZOOM_MS = 280;
 
 interface Colors {
   paper: string;
@@ -206,6 +206,7 @@ export const Treemap = memo(function Treemap(p: Props) {
   const [tip, setTip] = useState<{ x: number; y: number; rect: number } | null>(null);
   const last = useRef<{ zoom: number; layout: Layout | null; disk: Disk | null }>({ zoom: -1, layout: null, disk: null });
   const anim = useRef(0);
+  const wheelAt = useRef(0);
   const { disk, zoom, fmt, t, onArea } = p;
 
   useLayoutEffect(() => {
@@ -257,8 +258,7 @@ export const Treemap = memo(function Treemap(p: Props) {
 
     if (from && prev.layout) {
       const goingIn = disk.contains(prev.zoom, zoom);
-      // Zooming in magnifies the old sheet around the room; zooming out
-      // starts inside the new sheet at the room we came from.
+      // The room being entered or left, as it sits in the wider of the two views.
       const r = goingIn ? findRect(prev.layout, zoom) : findRect(layout, prev.zoom);
       const src = goingIn ? prev.layout : layout;
       if (r >= 0) {
@@ -266,7 +266,8 @@ export const Treemap = memo(function Treemap(p: Props) {
         to.width = W;
         to.height = H;
         to.getContext("2d")!.drawImage(cv, 0, 0);
-        const image = goingIn ? from : to;
+        const outer = goingIn ? from : to; // the wider view
+        const inner = goingIn ? to : from; // the room seen from inside
         const rx = src.x[r] * dpr;
         const ry = src.y[r] * dpr;
         const rw = Math.max(1, src.w[r] * dpr);
@@ -274,14 +275,30 @@ export const Treemap = memo(function Treemap(p: Props) {
         const start = performance.now();
         const step = (now: number): void => {
           const k = Math.min(1, (now - start) / ZOOM_MS);
-          const e = 1 - Math.pow(1 - k, 4);
-          const a = goingIn ? e : 1 - e;
+          const e = k < 0.5 ? 4 * k * k * k : 1 - Math.pow(-2 * k + 2, 3) / 2;
+          const a = goingIn ? e : 1 - e; // 0: the wider view fills the sheet, 1: the room does
+          // The camera's window on the wider view. It narrows geometrically,
+          // so the zoom feels even from start to end.
+          const vw = W * Math.pow(rw / W, a);
+          const vh = H * Math.pow(rh / H, a);
+          const vx = W - rw > 0.5 ? (rx * (W - vw)) / (W - rw) : 0;
+          const vy = H - rh > 0.5 ? (ry * (H - vh)) / (H - rh) : 0;
           ctx.setTransform(1, 0, 0, 1, 0, 0);
           ctx.imageSmoothingEnabled = true;
-          ctx.drawImage(image, rx * a, ry * a, W + (rw - W) * a, H + (rh - H) * a, 0, 0, W, H);
+          ctx.imageSmoothingQuality = "high";
+          ctx.globalAlpha = 1;
+          ctx.drawImage(outer, vx, vy, vw, vh, 0, 0, W, H);
+          // The room's own drawing rides on the room and takes over as it
+          // grows, so the picture stays sharp instead of ending on a jump.
+          const sx = W / vw;
+          const sy = H / vh;
+          ctx.globalAlpha = Math.max(0, Math.min(1, (a - 0.1) / 0.45));
+          ctx.drawImage(inner, (rx - vx) * sx, (ry - vy) * sy, rw * sx, rh * sy);
+          ctx.globalAlpha = 1;
           if (k < 1) anim.current = requestAnimationFrame(step);
           else ctx.drawImage(to, 0, 0);
         };
+        step(start);
         anim.current = requestAnimationFrame(step);
       }
     }
@@ -363,6 +380,9 @@ export const Treemap = memo(function Treemap(p: Props) {
           }
         }}
         onWheel={(e) => {
+          // One step per gesture: a trackpad sends dozens of wheel events.
+          if (e.timeStamp - wheelAt.current < 320) return;
+          wheelAt.current = e.timeStamp;
           if (e.deltaY > 0) {
             if (zoom > 0) p.onZoom(disk.parent(zoom));
           } else {

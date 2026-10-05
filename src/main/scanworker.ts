@@ -11,6 +11,7 @@ import { writeSnapshot } from "./snapshots";
 interface Job {
   root: string;
   snapshotDir: string;
+  quiet?: boolean; // no live preview and no snapshot: used to measure one pasted folder
 }
 
 const job = workerData as Job;
@@ -209,7 +210,7 @@ function onResult(w: number, res: DirResult): void {
     port.postMessage({ type: "progress", progress: progress() });
   }
   // Never let the preview take more than about a tenth of the scan's time.
-  if (!cancelled && now - lastLive > Math.max(900, liveCost * 10)) live();
+  if (!cancelled && !job.quiet && now - lastLive > Math.max(900, liveCost * 10)) live();
   dispatch();
 }
 
@@ -443,7 +444,7 @@ function finish(): void {
   if (process.env.DISKPLOT_TIMING) console.error("walk", walkMs, "finalize", Date.now() - startedAt - walkMs);
   let snapshot: SnapshotMeta | null = null;
   try {
-    snapshot = writeSnapshot(job.snapshotDir, table);
+    if (!job.quiet) snapshot = writeSnapshot(job.snapshotDir, table);
   } catch {
     // A scan is still useful without its snapshot.
   }

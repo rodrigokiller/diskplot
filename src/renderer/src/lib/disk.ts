@@ -1,5 +1,5 @@
 import { F_DIR, F_ERR, F_GONE, F_LINK } from "../../../shared/types";
-import type { ScanTable } from "../../../shared/types";
+import type { Measured, ScanTable } from "../../../shared/types";
 
 const decoder = new TextDecoder();
 
@@ -88,6 +88,134 @@ export class Disk {
     return at;
   }
 
+  // The node for an absolute path, or -1 when it is not part of this scan.
+  findPath(path: string): number {
+    const norm = (p: string): string => p.replace(/[\\/]+/g, this.sep).replace(/[\\/]$/, "").toLowerCase();
+    const root = norm(this.t.root);
+    const full = norm(path);
+    if (full === root) return 0;
+    if (!full.startsWith(root + this.sep)) return -1;
+    const names = path.replace(/[\\/]+/g, this.sep).replace(/[\\/]$/, "").slice(root.length + 1).split(this.sep);
+    let at = 0;
+    for (const name of names) {
+      const want = name.toLowerCase();
+      let next = -1;
+      for (const c of this.children(at)) {
+        if (this.name(c).toLowerCase() === want) {
+          next = c;
+          break;
+        }
+      }
+      if (next === -1) return -1;
+      at = next;
+    }
+    return at;
+  }
+
+  // Adds a freshly measured file or folder under `parent`. Ids already in
+  // use do not change: the new nodes are appended. Returns the new node.
+  graft(parent: number, item: Measured & { ok: true }): number {
+    const t = this.t as { -readonly [K in keyof ScanTable]: ScanTable[K] };
+    const enc = new TextEncoder();
+    const rootName = enc.encode(item.name);
+    const sub = item.kind === "dir" ? item.table : null;
+    const m = sub ? sub.n : 1;
+    const n0 = t.n;
+    const n1 = n0 + m;
+    const base = n0; // id of the grafted root
+
+    const grow = <A extends Int32Array | Float64Array | Uint32Array | Uint8Array | Uint16Array>(a: A, len: number): A => {
+      const b = new (a.constructor as new (n: number) => A)(len);
+      b.set(a.subarray(0, Math.min(a.length, len)));
+      return b;
+    };
+    const parentCol = grow(t.parent, n1);
+    const size = grow(t.size, n1);
+    const logical = grow(t.logical, n1);
+    const mtime = grow(t.mtime, n1);
+    const flags = grow(t.flags, n1);
+    const files = grow(t.files, n1);
+    const ext = grow(t.ext, n1);
+    const nameOff = grow(t.nameOff, n1 + 1);
+
+    const subNames = sub ? sub.names.subarray(sub.nameOff[1]) : new Uint8Array(0);
+    const names = new Uint8Array(t.names.length + rootName.length + subNames.length);
+    names.set(t.names);
+    names.set(rootName, t.names.length);
+    names.set(subNames, t.names.length + rootName.length);
+    nameOff[base + 1] = t.names.length + rootName.length;
+
+    parentCol[base] = parent;
+    if (sub) {
+      // Extensions are indexes into a per-table list; translate them.
+      const extMap = sub.exts.map((e) => {
+        let at = t.exts.indexOf(e);
+        if (at === -1 && t.exts.length < 0xffff) at = t.exts.push(e) - 1;
+        return Math.max(0, at);
+      });
+      const shift = nameOff[base + 1] - sub.nameOff[1];
+      for (let j = 0; j < m; j++) {
+        const id = base + j;
+        if (j > 0) {
+          parentCol[id] = base + sub.parent[j];
+          nameOff[id + 1] = sub.nameOff[j + 1] + shift;
+        }
+        size[id] = sub.size[j];
+        logical[id] = sub.logical[j];
+        mtime[id] = sub.mtime[j];
+        flags[id] = sub.flags[j];
+        files[id] = sub.files[j];
+        ext[id] = extMap[sub.ext[j]] ?? 0;
+      }
+    } else if (item.kind === "file") {
+      size[base] = item.size;
+      logical[base] = item.size;
+      mtime[base] = item.mtime;
+      const dot = item.name.lastIndexOf(".");
+      if (dot > 0 && dot < item.name.length - 1 && item.name.length - dot <= 12) {
+        const e = item.name.slice(dot + 1).toLowerCase();
+        let at = t.exts.indexOf(e);
+        if (at === -1 && t.exts.length < 0xffff) at = t.exts.push(e) - 1;
+        ext[base] = Math.max(0, at);
+      }
+    }
+
+    // Children lists: every folder keeps its order, the parent gains one entry.
+    const childStart = new Int32Array(n1 + 1);
+    for (let i = 0; i < n0; i++) childStart[i + 1] = t.childStart[i + 1] - t.childStart[i];
+    childStart[parent + 1]++;
+    if (sub) for (let j = 0; j < m; j++) childStart[base + j + 1] = sub.childStart[j + 1] - sub.childStart[j];
+    for (let i = 0; i < n1; i++) childStart[i + 1] += childStart[i];
+    const childList = new Int32Array(n1 - 1);
+    for (let i = 0; i < n0; i++) {
+      childList.set(t.childList.subarray(t.childStart[i], t.childStart[i + 1]), childStart[i]);
+    }
+    childList[childStart[parent + 1] - 1] = base;
+    if (sub) {
+      for (let j = 0; j < m; j++) {
+        const from = sub.childList.subarray(sub.childStart[j], sub.childStart[j + 1]);
+        const at = childStart[base + j];
+        for (let k = 0; k < from.length; k++) childList[at + k] = base + from[k];
+      }
+    }
+
+    const addBytes = size[base];
+    const addLogical = logical[base];
+    const addFiles = flags[base] & F_DIR ? files[base] : 1;
+    Object.assign(t, { n: n1, parent: parentCol, size, logical, mtime, flags, files, ext, nameOff, names, childStart, childList });
+    if (sub) t.dirs += sub.dirs;
+    for (let p = parent; p >= 0; p = t.parent[p]) {
+      t.size[p] += addBytes;
+      t.logical[p] += addLogical;
+      t.files[p] += addFiles;
+      if (t.mtime[base] > t.mtime[p]) t.mtime[p] = t.mtime[base];
+    }
+    for (let p = parent; p >= 0; p = t.parent[p]) this.resort(p);
+    this.nameCache.clear();
+    this.haystack = null;
+    return base;
+  }
+
   // Root first, the node itself last.
   ancestors(id: number): number[] {
     const out: number[] = [];
@@ -117,6 +245,7 @@ export class Disk {
 
   // Marks a node as removed and takes its weight off every ancestor.
   remove(id: number): void {
+    if (this.isDir(id)) this.t.dirs = Math.max(1, this.t.dirs - 1);
     const t = this.t;
     if (id <= 0 || t.flags[id] & F_GONE) return;
     const bytes = t.size[id];

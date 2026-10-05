@@ -49,6 +49,8 @@ const en = {
       ["Duplicate files", "Files of equal length are compared by content. Runs on request, not during the scan."],
       ["Size on disk", "Sizes are the space actually allocated, so compressed, sparse and online-only cloud files are counted for what they occupy."],
       ["Folder levels", "The treemap opens four levels of folders by default and draws deeper ones as a single block. The limit is adjustable."],
+      ["Several windows", "Each window holds one scan. Scan two drives at once and place them side by side."],
+      ["File operations", "Copy, cut and paste inside the scan, send to the Recycle Bin, and a properties panel for any item."],
       ["Themes", "Two themes, each in light and dark. English and Brazilian Portuguese."],
     ],
   },
@@ -134,6 +136,8 @@ const pt = {
       ["Arquivos duplicados", "Arquivos do mesmo tamanho são comparados pelo conteúdo. Roda sob demanda, não durante o scan."],
       ["Tamanho em disco", "Os tamanhos são o espaço realmente alocado, então arquivos compactados, esparsos e de nuvem que estão só online contam pelo que ocupam."],
       ["Níveis de pasta", "O treemap abre quatro níveis de pastas por padrão e desenha os mais fundos como um bloco só. O limite é ajustável."],
+      ["Várias janelas", "Cada janela guarda um scan. Escaneie duas unidades ao mesmo tempo e coloque uma ao lado da outra."],
+      ["Operações com arquivos", "Copiar, recortar e colar dentro do scan, enviar para a Lixeira e um painel de propriedades para qualquer item."],
       ["Temas", "Dois temas, cada um em claro e escuro. Inglês e português do Brasil."],
     ],
   },
@@ -176,6 +180,7 @@ const pt = {
   foot: ["O Diskplot é software livre sob a licença MIT.", "Relatar um problema", "Notas de versão", "Feito por"],
 };
 
+const WORDMARK = '<span class="wordmark" role="img" aria-label="Diskplot"><span aria-hidden="true">disk</span><span aria-hidden="true">plot</span></span>';
 const esc = (s) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/"/g, "&quot;");
 const MARK = `<svg width="24" height="24" viewBox="0 0 32 32" aria-hidden="true">
             <path d="M2 2h13v28H2z" fill="var(--t5)" />
@@ -229,7 +234,7 @@ function downloadPage(t) {
       <div class="wrap">
         <a class="brand" href="../" aria-label="Diskplot">
           ${MARK}
-          Diskplot
+          ${WORDMARK}
         </a>
         <nav>
           <a href="../">${t.dl.back}</a>
@@ -325,7 +330,7 @@ function page(t) {
       <div class="wrap">
         <a class="brand" href="./" aria-label="Diskplot">
           ${MARK}
-          Diskplot
+          ${WORDMARK}
         </a>
         <nav>
           ${t.nav.map((label, i) => `<a href="#${ids[i]}">${label}</a>`).join("\n          ")}

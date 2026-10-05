@@ -197,9 +197,28 @@ p {
   display: flex;
   align-items: center;
   gap: 8px;
-  padding: 0 12px 0 10px;
-  font-weight: 600;
-  letter-spacing: 0.01em;
+  padding: 0 14px 0 10px;
+}
+
+/* The wordmark: DISK small and spaced above, PLOT large in the theme's ink. */
+.wordmark {
+  display: grid;
+  font: 600 var(--wm, 17px) / 0.82 "Barlow Semi Condensed", var(--font);
+  letter-spacing: -0.015em;
+  user-select: none;
+}
+.wordmark span:first-child {
+  font: 400 0.42em/1 var(--font);
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  padding-left: 0.08em;
+  margin-bottom: 0.1em;
+}
+.wordmark span:last-child {
+  color: var(--t4);
+  text-transform: uppercase;
+  font-size: 1.05em;
+  letter-spacing: 0;
 }
 .menus {
   display: flex;
@@ -210,6 +229,17 @@ p {
   background: none;
   padding: 0 10px;
   height: 100%;
+}
+.menu-button u {
+  text-decoration: none;
+}
+.menus.keys .menu-button u {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+.menu-button.focus {
+  outline: 2px solid var(--ink);
+  outline-offset: -2px;
 }
 .menu-button:hover,
 .menu-button[aria-expanded="true"] {
@@ -268,20 +298,18 @@ p {
   color: var(--ink-2);
   padding-left: 24px;
 }
-.menu-item:hover:not(:disabled),
-.menu-item:focus-visible {
+.menu-item.active {
   background: var(--ink);
   color: var(--paper);
   outline: none;
 }
-.menu-item:hover:not(:disabled) kbd,
-.menu-item:focus-visible kbd {
+.menu-item.active kbd {
   color: inherit;
 }
 .menu-item:disabled {
   color: var(--line-strong);
 }
-.menu-item.danger:hover:not(:disabled) {
+.menu-item.danger.active {
   background: var(--red);
   color: var(--on-red);
 }
@@ -1030,6 +1058,59 @@ p {
 .problem p {
   margin: 6px 0 12px;
   user-select: text;
+}
+
+.props {
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 0;
+  margin: 12px 0 0;
+  border-top: 1px solid var(--line-strong);
+}
+.props dt,
+.props dd {
+  margin: 0;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--line);
+}
+.props dt {
+  color: var(--ink-2);
+  padding-right: 24px;
+}
+.props dd {
+  overflow-wrap: anywhere;
+}
+.keys {
+  width: 100%;
+  border-collapse: collapse;
+}
+.keys th {
+  text-align: left;
+  font-weight: 600;
+  padding: 12px 0 4px;
+  border-bottom: 1px solid var(--line-strong);
+}
+.keys tr:first-child th {
+  padding-top: 0;
+}
+.keys td {
+  padding: 4px 0;
+  border-bottom: 1px solid var(--line);
+}
+.keys td:last-child {
+  text-align: right;
+  white-space: nowrap;
+  padding-left: 24px;
+}
+.keys kbd {
+  font: inherit;
+  font-weight: 500;
+  border: 1px solid var(--line-strong);
+  padding: 0 5px;
+  background: var(--panel);
+}
+dialog.wide {
+  width: min(620px, calc(100vw - 48px));
 }
 
 /* Floating things ------------------------------------------------------- */

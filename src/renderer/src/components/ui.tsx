@@ -1,5 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
-import type { KeyboardEvent, ReactNode } from "react";
+import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from "react";
 import { Icon } from "./Icon";
 import type { IconName } from "./Icon";
 
@@ -10,7 +10,7 @@ export function VirtualRows(props: {
   count: number;
   render: (index: number, top: number) => ReactNode;
   reveal?: { index: number; tick: number };
-  onKeyDown?: (e: KeyboardEvent<HTMLDivElement>) => void;
+  onKeyDown?: (e: ReactKeyboardEvent<HTMLDivElement>) => void;
   onLeave?: () => void;
   label: string;
 }) {
@@ -66,52 +66,101 @@ export type MenuEntry =
   | { kind: "sep" }
   | { kind: "title"; label: string };
 
-// A square drop menu, used by the title bar and by right click.
-export function Menu(props: { x: number; y: number; items: MenuEntry[]; onClose: () => void }) {
+// A square drop menu, used by the menu bar and by right click.
+//
+// It never takes keyboard focus. The highlighted row is its own state and the
+// keys are read from the window while it is open, so a click on the bar or on
+// the page cannot leave it open with the keyboard pointing somewhere else.
+export function Menu(props: {
+  x: number;
+  y: number;
+  items: MenuEntry[];
+  onClose: () => void;
+  onSide?: (dir: -1 | 1) => void; // left and right arrows, for the menu bar
+  first?: boolean; // opened from the keyboard: start on the first row
+}) {
   const ref = useRef<HTMLDivElement>(null);
   const [pos, setPos] = useState({ x: props.x, y: props.y });
+  const usable = props.items.map((it, i) => (it.kind === undefined || it.kind === "item" ? (it.disabled ? -1 : i) : -1)).filter((i) => i >= 0);
+  const [active, setActive] = useState(-1);
+  const live = useRef({ props, active, usable });
+  live.current = { props, active, usable };
 
   useLayoutEffect(() => {
-    const el = ref.current!;
-    const r = el.getBoundingClientRect();
+    const r = ref.current!.getBoundingClientRect();
     setPos({
       x: Math.max(4, Math.min(props.x, window.innerWidth - r.width - 4)),
       y: Math.max(4, Math.min(props.y, window.innerHeight - r.height - 4)),
     });
-    el.querySelector<HTMLButtonElement>("button:not(:disabled)")?.focus();
+    setActive(props.first ? (live.current.usable[0] ?? -1) : -1);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [props.x, props.y, props.items]);
 
   useEffect(() => {
     const down = (e: MouseEvent): void => {
-      if (!ref.current?.contains(e.target as Node)) props.onClose();
+      const target = e.target as HTMLElement;
+      if (ref.current?.contains(target)) return;
+      // The bar button that opened this menu closes it itself.
+      if (target.closest?.("[data-menu-owner]")) return;
+      live.current.props.onClose();
     };
-    const close = (): void => props.onClose();
+    const close = (): void => live.current.props.onClose();
+    const key = (e: KeyboardEvent): void => {
+      const { props: p, active: at, usable: rows } = live.current;
+      const move = (to: number): void => setActive(rows[(to + rows.length) % rows.length] ?? -1);
+      const here = rows.indexOf(at);
+      switch (e.key) {
+        case "Escape":
+          p.onClose();
+          break;
+        case "ArrowDown":
+          move(here + 1);
+          break;
+        case "ArrowUp":
+          move(here === -1 ? rows.length - 1 : here - 1);
+          break;
+        case "Home":
+          move(0);
+          break;
+        case "End":
+          move(rows.length - 1);
+          break;
+        case "ArrowLeft":
+        case "ArrowRight":
+          if (!p.onSide) return;
+          p.onSide(e.key === "ArrowLeft" ? -1 : 1);
+          break;
+        case "Enter":
+        case " ": {
+          const it = p.items[at];
+          if (!it || (it.kind !== undefined && it.kind !== "item")) return;
+          p.onClose();
+          it.run();
+          break;
+        }
+        case "Tab":
+          break; // swallowed: focus stays where it was
+        default:
+          return;
+      }
+      // While a menu is open its keys belong to it and to nothing else.
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    };
     window.addEventListener("mousedown", down, true);
+    window.addEventListener("keydown", key, true);
     window.addEventListener("blur", close);
     window.addEventListener("resize", close);
     return () => {
       window.removeEventListener("mousedown", down, true);
+      window.removeEventListener("keydown", key, true);
       window.removeEventListener("blur", close);
       window.removeEventListener("resize", close);
     };
-  }, [props]);
-
-  const onKey = (e: KeyboardEvent): void => {
-    if (e.key === "Escape") {
-      e.stopPropagation();
-      props.onClose();
-      return;
-    }
-    if (e.key !== "ArrowDown" && e.key !== "ArrowUp") return;
-    e.preventDefault();
-    const buttons = [...ref.current!.querySelectorAll<HTMLButtonElement>("button:not(:disabled)")];
-    const at = buttons.indexOf(document.activeElement as HTMLButtonElement);
-    const next = (at + (e.key === "ArrowDown" ? 1 : -1) + buttons.length) % buttons.length;
-    buttons[next]?.focus();
-  };
+  }, []);
 
   return (
-    <div ref={ref} className="menu" role="menu" style={{ left: pos.x, top: pos.y }} onKeyDown={onKey}>
+    <div ref={ref} className="menu" role="menu" style={{ left: pos.x, top: pos.y }} onMouseLeave={() => setActive(-1)}>
       {props.items.map((it, i) => {
         if (it.kind === "sep") return <div key={i} className="menu-sep" role="separator" />;
         if (it.kind === "title")
@@ -124,8 +173,11 @@ export function Menu(props: { x: number; y: number; items: MenuEntry[]; onClose:
           <button
             key={i}
             role="menuitem"
-            className={"menu-item" + (it.danger ? " danger" : "")}
+            tabIndex={-1}
+            className={"menu-item" + (it.danger ? " danger" : "") + (i === active ? " active" : "")}
             disabled={it.disabled}
+            onMouseEnter={() => setActive(it.disabled ? -1 : i)}
+            onMouseDown={(e) => e.preventDefault()}
             onClick={() => {
               props.onClose();
               it.run();

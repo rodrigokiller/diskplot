@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import type { DriveInfo, ScanProgress, ScanTable, SnapshotMeta, UpdateStatus } from "../../shared/types";
+import type { DriveInfo, ItemStat, ScanProgress, ScanTable, SnapshotMeta, UpdateStatus, WindowInfo } from "../../shared/types";
 import { Disk } from "./lib/disk";
 import { NO_FILTER, compare, isFiltering, runFilter, topFiles } from "./lib/analysis";
 import type { Comparison, Filter } from "./lib/analysis";
 import { initialLang, makeFmt, makeT } from "./lib/i18n";
 import type { Fmt, Lang, T } from "./lib/i18n";
-import { Icon, Mark } from "./components/Icon";
+import { Icon, Mark, Wordmark } from "./components/Icon";
 import { Menu } from "./components/ui";
 import type { MenuEntry } from "./components/ui";
 import { Treemap } from "./components/Treemap";
@@ -18,6 +18,10 @@ type Mode = "system" | "light" | "dark";
 const FAMILIES = ["grid", "paper"] as const;
 const MODES = ["system", "light", "dark"] as const;
 const LEVELS = [2, 3, 4, 5, 6, 0] as const; // 0 means every level
+const BAR = ["file", "view", "window", "help"] as const;
+type BarName = (typeof BAR)[number];
+// Shown in menus and in the shortcut list. The Mac spells the modifier its own way.
+const MOD = navigator.platform.toLowerCase().includes("mac") ? "Cmd" : "Ctrl";
 type Tab = "tree" | "largest" | "types" | "clutter" | "dupes" | "changes" | "found";
 type Phase = { is: "start" } | { is: "scanning"; root: string } | { is: "failed"; root: string; error: string } | { is: "ready" };
 
@@ -84,16 +88,21 @@ export function App() {
   // Where the plan has been, for Back and Forward.
   const [trail, setTrail] = useState<{ back: number[]; forward: number[] }>({ back: [], forward: [] });
 
-  const [menu, setMenu] = useState<{ x: number; y: number; items: MenuEntry[]; from?: string } | null>(null);
+  const [menu, setMenu] = useState<{ x: number; y: number; items: MenuEntry[]; from?: BarName; first?: boolean } | null>(null);
+  // Which bar entry the keyboard is on after Alt, or -1.
+  const [barFocus, setBarFocus] = useState(-1);
+  const [windows, setWindows] = useState<WindowInfo[]>([]);
+  const [propsOf, setPropsOf] = useState<number | null>(null);
+  const [itemStat, setItemStat] = useState<ItemStat | null>(null);
   const [trash, setTrash] = useState<number[] | null>(null);
-  const [dialog, setDialog] = useState<"issues" | "about" | null>(null);
+  const [dialog, setDialog] = useState<"issues" | "about" | "keys" | null>(null);
   const [notice, setNotice] = useState<{ text: string; bad?: boolean; action?: { label: string; run: () => void } } | null>(null);
   const [toast, setToast] = useState<string | null>(null);
   const [dropping, setDropping] = useState(false);
   const [appVersion, setAppVersion] = useState("");
   const askedUpdate = useRef(false);
-  const view = useRef({ disk, zoom, selected, expanded });
-  view.current = { disk, zoom, selected, expanded };
+  const view = useRef({ disk, zoom, selected, expanded, trail, menu, barFocus });
+  view.current = { disk, zoom, selected, expanded, trail, menu, barFocus };
   const searchRef = useRef<HTMLInputElement>(null);
 
   // Preferences ------------------------------------------------------------
@@ -112,6 +121,17 @@ export function App() {
   useEffect(() => {
     document.documentElement.lang = lang === "pt" ? "pt-BR" : "en";
   }, [lang]);
+
+  // Windows ----------------------------------------------------------------
+
+  useEffect(() => {
+    void window.api.listWindows().then(setWindows);
+    return window.api.onWindows(setWindows);
+  }, []);
+  const titleRoot = disk ? disk.t.root : phase.is === "scanning" ? phase.root : "";
+  useEffect(() => {
+    void window.api.setTitle(titleRoot ? titleRoot + " - Diskplot" : "Diskplot");
+  }, [titleRoot]);
 
   // Start ------------------------------------------------------------------
 
@@ -138,6 +158,11 @@ export function App() {
       else if (r.root) setPhase({ is: "scanning", root: r.root });
     });
   }, []);
+
+  useEffect(() => {
+    const m = /^#scan=(.+)$/.exec(window.location.hash);
+    if (m) startScan(decodeURIComponent(m[1]));
+  }, [startScan]);
 
   const pickFolder = useCallback(() => {
     void window.api.pickFolder().then((path) => path && startScan(path));
@@ -170,8 +195,12 @@ export function App() {
           if (e > 0) expanded.add(e);
         }
       }
+      const carry = (ids: number[]): number[] =>
+        old.disk && old.disk.t.root === table.root
+          ? ids.map((id) => (id === 0 ? 0 : d.follow(old.disk!.trail(id)))).filter((id) => id >= 0 && d.isDir(id))
+          : [];
       setDisk(d);
-      setTrail({ back: [], forward: [] });
+      setTrail({ back: carry(old.trail.back), forward: carry(old.trail.forward) });
       setVersion(0);
       setZoom(zoom);
       setSelected(selected);
@@ -330,27 +359,97 @@ export function App() {
     setTimeout(() => setToast(null), 1600);
   };
 
+  // Copy, cut and paste work on the finished scan only: while it is still
+  // running the table is replaced every second.
+  const copyItem = (id: number, cut: boolean): void => {
+    if (!disk || phase.is !== "ready" || id < 0 || (cut && id === 0)) return;
+    void window.api.setClip([disk.path(id)], cut).then(() => flash(t(cut ? "clip.cut" : "clip.copied")));
+  };
+  const pasteInto = async (dir: number): Promise<void> => {
+    if (!disk || phase.is !== "ready" || dir < 0 || !disk.isDir(dir)) return;
+    const clip = await window.api.getClip();
+    if (!clip || clip.paths.length === 0) return flash(t("clip.empty"));
+    setNotice({ text: t("clip.working") });
+    const results = await window.api.paste(clip.paths, clip.cut, disk.path(dir));
+    let failed = 0;
+    let why = "";
+    let done = 0;
+    let last = -1;
+    for (const r of results) {
+      if (!r.ok) {
+        failed++;
+        why = why || (r.error ?? "");
+        continue;
+      }
+      if (clip.cut) {
+        // The original left its place, if that place is part of this scan.
+        const src = disk.findPath(r.src);
+        if (src > 0) {
+          if (disk.contains(src, view.current.zoom)) setZoom(Math.max(0, disk.parent(src)));
+          if (view.current.selected >= 0 && disk.contains(src, view.current.selected)) setSelected(-1);
+          disk.remove(src);
+        }
+      }
+      const measured = await window.api.measure(r.dest);
+      if (measured.ok) last = disk.graft(dir, measured);
+      done++;
+    }
+    setHover(-1);
+    setVersion((v) => v + 1);
+    if (last >= 0) select(last);
+    if (failed > 0) {
+      const known = ["EINSIDE", "ESAME", "EEXIST"].includes(why) ? (why as "EINSIDE" | "ESAME" | "EEXIST") : "other";
+      setNotice({ text: t("clip.failed", { count: failed, why: t(`clip.${known}`) }), bad: true });
+    } else {
+      setNotice(null);
+      flash(t("clip.pasted", { count: done }));
+    }
+  };
+  // Where a paste lands: the selected folder, or the folder of the selected file.
+  const pasteTarget = (): number => {
+    if (!disk) return -1;
+    const s = view.current.selected;
+    if (s >= 0 && !disk.isGone(s)) return disk.isDir(s) ? s : disk.parent(s);
+    return view.current.zoom;
+  };
+  const showProps = (id: number): void => {
+    if (!disk || id < 0) return;
+    setItemStat(null);
+    setPropsOf(id);
+    void window.api.stat(disk.path(id)).then(setItemStat);
+  };
+
   const context = useCallback(
     (id: number, x: number, y: number) => {
       if (!disk) return;
       const path = disk.path(id);
       const dir = disk.isDir(id);
+      const done = phase.is === "ready";
       const items: MenuEntry[] = [
         { label: t("act.open"), icon: "open", run: () => void window.api.openPath(path) },
         { label: t("act.reveal"), icon: "reveal", run: () => void window.api.showInFolder(path) },
-        {
-          label: t("act.copyPath"),
-          icon: "copy",
-          keys: "Ctrl+C",
-          run: () => void window.api.copyText(path).then(() => flash(t("copied"))),
-        },
       ];
       if (dir) items.push({ label: t("act.zoom"), icon: "enter", keys: "Enter", run: () => zoomTo(id) });
-      if (id > 0) items.push({ kind: "sep" }, { label: t("act.trash"), icon: "trash", keys: "Del", danger: true, run: () => setTrash([id]) });
+      items.push(
+        { kind: "sep" },
+        { label: t("act.copy"), icon: "copy", keys: MOD + "+C", disabled: !done, run: () => copyItem(id, false) },
+        { label: t("act.cut"), icon: "cut", keys: MOD + "+X", disabled: !done || id === 0, run: () => copyItem(id, true) },
+        {
+          label: t(dir ? "act.pasteHere" : "act.paste"),
+          icon: "paste",
+          keys: MOD + "+V",
+          disabled: !done,
+          run: () => void pasteInto(dir ? id : disk.parent(id)),
+        },
+        { label: t("act.copyPath"), keys: MOD + "+Shift+C", run: () => void window.api.copyText(path).then(() => flash(t("copied"))) },
+        { kind: "sep" },
+        { label: t("act.properties"), icon: "info", keys: "Alt+Enter", run: () => showProps(id) },
+      );
+      if (id > 0) items.push({ kind: "sep" }, { label: t("act.trash"), icon: "trash", keys: "Del", danger: true, disabled: !done, run: () => setTrash([id]) });
       setMenu({ x, y, items });
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [disk, t, zoomTo],
+    [disk, t, zoomTo, phase.is],
   );
 
   const askTrash = useCallback((ids: number[]) => setTrash(ids), []);
@@ -382,19 +481,21 @@ export function App() {
   const ready = phase.is === "ready" && disk !== null;
   // During a scan the plan is already on screen, filling in as folders are measured.
   const live = phase.is === "scanning" && disk !== null;
-  const menus: Record<string, () => MenuEntry[]> = {
+  // Anything that moves around the plan works during a scan as well.
+  const nav = ready || live;
+  const menus: Record<BarName, () => MenuEntry[]> = {
     file: () => [
-      { label: t("menu.chooseFolder"), icon: "folder", keys: "Ctrl+O", run: pickFolder },
+      { label: t("menu.chooseFolder"), icon: "folder", keys: MOD + "+O", run: pickFolder },
       { label: t("menu.rescan"), icon: "rescan", keys: "F5", disabled: !ready, run: () => disk && startScan(disk.t.root) },
       { label: t("menu.start"), icon: "drive", disabled: phase.is === "start", run: toStart },
       { kind: "sep" },
       { label: t("menu.exit"), keys: "Alt+F4", run: () => void window.api.quit() },
     ],
     view: () => [
-      { label: t("menu.zoomOut"), icon: "up", keys: "Backspace", disabled: !ready || zoom === 0, run: () => disk && zoomTo(disk.parent(zoom)) },
-      { label: t("menu.zoomRoot"), disabled: !ready || zoom === 0, run: () => zoomTo(0) },
-      { label: t("menu.back"), icon: "back", keys: "Alt+Left", disabled: !ready || trail.back.length === 0, run: () => step("back") },
-      { label: t("menu.forward"), icon: "forward", keys: "Alt+Right", disabled: !ready || trail.forward.length === 0, run: () => step("forward") },
+      { label: t("menu.zoomOut"), icon: "up", keys: "Backspace", disabled: !nav || zoom === 0, run: () => disk && zoomTo(disk.parent(zoom)) },
+      { label: t("menu.zoomRoot"), disabled: !nav || zoom === 0, run: () => zoomTo(0) },
+      { label: t("menu.back"), icon: "back", keys: "Alt+Left", disabled: !nav || trail.back.length === 0, run: () => step("back") },
+      { label: t("menu.forward"), icon: "forward", keys: "Alt+Right", disabled: !nav || trail.forward.length === 0, run: () => step("forward") },
       { kind: "sep" },
       { kind: "title", label: t("menu.levels") },
       ...LEVELS.map(
@@ -446,7 +547,19 @@ export function App() {
       { kind: "sep" },
       { label: t("menu.fullscreen"), keys: "F11", run: () => void window.api.toggleFullScreen() },
     ],
+    window: () => [
+      { label: t("menu.newWindow"), icon: "windows", keys: MOD + "+N", run: () => void window.api.newWindow() },
+      { label: t("menu.closeWindow"), keys: MOD + "+W", run: () => void window.api.closeWindow() },
+      { kind: "sep" },
+      { label: t("menu.sideBySide"), disabled: windows.length < 2, run: () => void window.api.arrangeWindows("columns") },
+      { label: t("menu.stacked"), disabled: windows.length < 2, run: () => void window.api.arrangeWindows("rows") },
+      { label: t("menu.cascade"), disabled: windows.length < 2, run: () => void window.api.arrangeWindows("cascade") },
+      { kind: "sep" },
+      ...windows.map((w): MenuEntry => ({ label: w.title, checked: w.focused, run: () => void window.api.focusWindow(w.id) })),
+    ],
     help: () => [
+      { label: t("menu.shortcuts"), keys: "F1", run: () => setDialog("keys") },
+      { kind: "sep" },
       { label: t("menu.website"), icon: "reveal", run: () => void window.api.openExternal(SITE) },
       { label: t("menu.source"), icon: "reveal", run: () => void window.api.openExternal(REPO) },
       { kind: "sep" },
@@ -460,17 +573,96 @@ export function App() {
       { label: t("menu.about"), run: () => setDialog("about") },
     ],
   };
-  const openMenu = (name: string, el: HTMLElement): void => {
+  const openMenu = (name: BarName, first = false): void => {
+    const el = document.querySelector<HTMLElement>(`[data-menu="${name}"]`);
+    if (!el) return;
     const r = el.getBoundingClientRect();
-    setMenu({ x: r.left, y: r.bottom, items: menus[name](), from: name });
+    setBarFocus(-1);
+    setMenu({ x: r.left, y: r.bottom, items: menus[name](), from: name, first });
   };
+  const openRef = useRef(openMenu);
+  openRef.current = openMenu;
+
+  // The menu bar from the keyboard: Alt alone moves onto it, the arrows walk
+  // it, Alt with a letter opens that menu, Escape leaves. Registered in the
+  // capture phase so these keys never reach the shortcuts below.
+  useEffect(() => {
+    let altAlone = false;
+    const byKey = (key: string): BarName | undefined => BAR.find((n) => t(`menu.${n}.key`) === key.toLowerCase());
+    const swallow = (e: KeyboardEvent): void => {
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    };
+    const down = (e: KeyboardEvent): void => {
+      if (e.key === "Alt") {
+        if (!e.repeat) altAlone = true;
+        e.preventDefault(); // keep Windows from opening the system menu
+        return;
+      }
+      altAlone = false;
+      const { menu: open, barFocus: at } = view.current;
+      if (open) return; // an open menu reads its own keys
+      if (e.altKey && !e.ctrlKey && !e.metaKey && e.key.length === 1) {
+        const name = byKey(e.key);
+        if (name) {
+          swallow(e);
+          openRef.current(name, true);
+        }
+        return;
+      }
+      if (at < 0) return;
+      if (e.key === "ArrowLeft" || e.key === "ArrowRight") setBarFocus((at + (e.key === "ArrowLeft" ? -1 : 1) + BAR.length) % BAR.length);
+      else if (e.key === "ArrowDown" || e.key === "Enter" || e.key === " ") openRef.current(BAR[at], true);
+      else if (e.key === "Escape") setBarFocus(-1);
+      else if (e.key.length === 1 && byKey(e.key)) openRef.current(byKey(e.key)!, true);
+      else {
+        setBarFocus(-1);
+        return;
+      }
+      swallow(e);
+    };
+    const up = (e: KeyboardEvent): void => {
+      if (e.key !== "Alt" || !altAlone) return;
+      altAlone = false;
+      e.preventDefault();
+      if (view.current.menu) setMenu(null);
+      else setBarFocus((f) => (f >= 0 ? -1 : 0));
+    };
+    const leave = (): void => {
+      altAlone = false;
+      setBarFocus(-1);
+    };
+    window.addEventListener("keydown", down, true);
+    window.addEventListener("keyup", up, true);
+    window.addEventListener("mousedown", leave, true);
+    window.addEventListener("blur", leave);
+    return () => {
+      window.removeEventListener("keydown", down, true);
+      window.removeEventListener("keyup", up, true);
+      window.removeEventListener("mousedown", leave, true);
+      window.removeEventListener("blur", leave);
+    };
+  }, [t]);
 
   // Keyboard ---------------------------------------------------------------
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent): void => {
       const typing = e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement;
-      if (e.key === "F5") {
+      const mod = e.ctrlKey || e.metaKey;
+      const key = e.key.toLowerCase();
+      // A dialog keeps the keyboard to itself.
+      if (document.querySelector("dialog[open]")) return;
+      if (e.key === "F1") {
+        e.preventDefault();
+        setDialog("keys");
+      } else if (mod && key === "n") {
+        e.preventDefault();
+        void window.api.newWindow();
+      } else if (mod && key === "w") {
+        e.preventDefault();
+        void window.api.closeWindow();
+      } else if (e.key === "F5") {
         e.preventDefault();
         if (ready && disk) startScan(disk.t.root);
       } else if (e.key === "F11") {
@@ -478,28 +670,36 @@ export function App() {
         void window.api.toggleFullScreen();
       } else if (e.key === "F12") {
         void window.api.toggleDevTools();
-      } else if (e.ctrlKey && e.key.toLowerCase() === "o") {
+      } else if (mod && key === "o") {
         e.preventDefault();
         pickFolder();
-      } else if (e.ctrlKey && e.key.toLowerCase() === "f") {
+      } else if (mod && key === "f") {
         e.preventDefault();
         searchRef.current?.focus();
         searchRef.current?.select();
       } else if (e.key === "Escape") {
         if (typing && query) clearFilters();
         else if (phase.is === "scanning") toStart();
-      } else if (!typing && ready && disk) {
+      } else if (!typing && nav && disk) {
         if (e.altKey && e.key === "ArrowLeft") step("back");
         else if (e.altKey && e.key === "ArrowRight") step("forward");
+        else if (e.altKey && e.key === "Enter" && selected >= 0) showProps(selected);
         else if (e.key === "Backspace" && zoom > 0) zoomTo(disk.parent(zoom));
-        else if (e.ctrlKey && e.key.toLowerCase() === "c" && selected >= 0) {
+        else if (mod && e.shiftKey && key === "c" && selected >= 0) {
           void window.api.copyText(disk.path(selected)).then(() => flash(t("copied")));
-        } else if (e.key === "Delete" && selected > 0 && !(e.target as HTMLElement).closest?.(".rows")) setTrash([selected]);
+        } else if (mod && key === "c" && selected >= 0) {
+          // Leave the system copy alone when text is selected.
+          if (!window.getSelection()?.toString()) copyItem(selected, false);
+        } else if (mod && key === "x" && selected > 0) copyItem(selected, true);
+        else if (mod && key === "v") void pasteInto(pasteTarget());
+        else if (ready && e.key === "Delete" && selected > 0 && !(e.target as HTMLElement).closest?.(".rows")) setTrash([selected]);
+        else return;
+        e.preventDefault();
       }
     };
     // The side buttons of a mouse go back and forward, as in a browser.
     const onMouse = (e: MouseEvent): void => {
-      if (!ready) return;
+      if (!nav) return;
       if (e.button === 3) step("back");
       else if (e.button === 4) step("forward");
     };
@@ -510,7 +710,7 @@ export function App() {
       window.removeEventListener("mouseup", onMouse);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [ready, disk, zoom, selected, phase, query, t, startScan, pickFolder, zoomTo, toStart, step]);
+  }, [ready, nav, disk, zoom, selected, phase, query, t, startScan, pickFolder, zoomTo, toStart, step]);
 
   // Splitter ---------------------------------------------------------------
 
@@ -534,7 +734,7 @@ export function App() {
 
   // Derived ----------------------------------------------------------------
 
-  const crumbs = useMemo(() => (disk && ready ? disk.ancestors(zoom) : []), [disk, ready, zoom]);
+  const crumbs = useMemo(() => (disk && nav ? disk.ancestors(zoom) : []), [disk, nav, zoom]);
   const scale = useMemo(() => {
     if (!disk || planArea <= 0 || disk.size(zoom) <= 0) return null;
     const perPixel = disk.size(zoom) / planArea;
@@ -576,37 +776,48 @@ export function App() {
       <header className="titlebar">
         <div className="brand">
           <Mark />
-          Diskplot
+          <Wordmark />
         </div>
-        <nav className="menus">
-          {(["file", "view", "help"] as const).map((name) => (
-            <button
-              key={name}
-              className="menu-button"
-              aria-haspopup="menu"
-              aria-expanded={menu?.from === name}
-              onMouseDown={(e) => {
-                e.stopPropagation();
-                if (menu?.from === name) setMenu(null);
-                else openMenu(name, e.currentTarget);
-              }}
-              onMouseEnter={(e) => {
-                if (menu?.from && menu.from !== name) openMenu(name, e.currentTarget);
-              }}
-              onKeyDown={(e) => {
-                if (e.key === "Enter" || e.key === " " || e.key === "ArrowDown") {
+        <nav className={"menus" + (barFocus >= 0 || menu?.from ? " keys" : "")}>
+          {BAR.map((name, i) => {
+            const label = t(`menu.${name}`);
+            const at = label.toLowerCase().indexOf(t(`menu.${name}.key`));
+            return (
+              <button
+                key={name}
+                data-menu={name}
+                data-menu-owner=""
+                tabIndex={-1}
+                className={"menu-button" + (barFocus === i ? " focus" : "")}
+                aria-haspopup="menu"
+                aria-expanded={menu?.from === name}
+                onMouseDown={(e) => {
+                  // The button keeps neither focus nor the click: it only toggles.
                   e.preventDefault();
-                  openMenu(name, e.currentTarget);
-                }
-              }}
-            >
-              {t(`menu.${name}`)}
-            </button>
-          ))}
+                  if (menu?.from === name) setMenu(null);
+                  else openMenu(name);
+                }}
+                onMouseEnter={() => {
+                  if (menu?.from && menu.from !== name) openMenu(name);
+                }}
+              >
+                {at < 0 ? (
+                  label
+                ) : (
+                  <>
+                    {label.slice(0, at)}
+                    <u>{label[at]}</u>
+                    {label.slice(at + 1)}
+                  </>
+                )}
+              </button>
+            );
+          })}
         </nav>
-        <div className="titlebar-path">{ready ? disk.path(zoom) : phase.is === "scanning" ? phase.root : ""}</div>
+        <div className="titlebar-path">{nav && disk ? disk.path(zoom) : phase.is === "scanning" ? phase.root : ""}</div>
         <button
           className="menu-button titlebar-tool"
+          tabIndex={-1}
           title={t("menu.toggleMode")}
           aria-label={t("menu.toggleMode")}
           onClick={() => {
@@ -643,8 +854,23 @@ export function App() {
         <>
           {live && (
             <div className="toolrow livebar" role="status">
+              <button className="btn icon" disabled={trail.back.length === 0} title={t("menu.back") + " (Alt+Left)"} aria-label={t("menu.back")} onClick={() => step("back")}>
+                <Icon name="back" />
+              </button>
+              <button
+                className="btn icon"
+                disabled={trail.forward.length === 0}
+                title={t("menu.forward") + " (Alt+Right)"}
+                aria-label={t("menu.forward")}
+                onClick={() => step("forward")}
+              >
+                <Icon name="forward" />
+              </button>
+              <button className="btn icon" disabled={zoom === 0} title={t("menu.zoomOut") + " (Backspace)"} aria-label={t("menu.zoomOut")} onClick={() => zoomTo(disk.parent(zoom))}>
+                <Icon name="up" />
+              </button>
               <Icon name="scan" />
-              <strong>{t("scan.title", { root: disk.t.root })}</strong>
+              <strong>{t("scan.title", { root: zoom === 0 ? disk.t.root : disk.name(zoom) })}</strong>
               <span className="live-now">
                 <bdi>{progress?.current ?? ""}</bdi>
               </span>
@@ -884,7 +1110,20 @@ export function App() {
         </>
       )}
 
-      {menu && <Menu x={menu.x} y={menu.y} items={menu.items} onClose={() => setMenu(null)} />}
+      {menu && (
+        <Menu
+          x={menu.x}
+          y={menu.y}
+          items={menu.items}
+          first={menu.first}
+          onClose={() => setMenu(null)}
+          onSide={
+            menu.from
+              ? (dir) => openMenu(BAR[(BAR.indexOf(menu.from!) + dir + BAR.length) % BAR.length], true)
+              : undefined
+          }
+        />
+      )}
       {toast && (
         <div className="toast" role="status">
           {toast}
@@ -939,13 +1178,150 @@ export function App() {
         </Dialog>
       )}
 
+      {propsOf !== null && disk && !disk.isGone(propsOf) && (
+        <Dialog onClose={() => setPropsOf(null)}>
+          <header>
+            <h2>{t("props.title")}</h2>
+          </header>
+          <div className="body">
+            <dl className="props">
+              <dt>{t("props.name")}</dt>
+              <dd>{propsOf === 0 ? disk.t.root : disk.name(propsOf)}</dd>
+              {propsOf > 0 && (
+                <>
+                  <dt>{t("props.location")}</dt>
+                  <dd>{disk.path(disk.parent(propsOf))}</dd>
+                </>
+              )}
+              <dt>{t("props.kind")}</dt>
+              <dd>
+                {disk.isLink(propsOf)
+                  ? t("props.link")
+                  : disk.isDir(propsOf)
+                    ? t("props.folder")
+                    : t("props.file") + (disk.ext(propsOf) ? " ." + disk.ext(propsOf) : "")}
+              </dd>
+              <dt>{t("props.onDisk")}</dt>
+              <dd>
+                {fmt.bytes(disk.size(propsOf))} ({t("props.bytes", { count: fmt.count(disk.size(propsOf)) })})
+              </dd>
+              <dt>{t("props.length")}</dt>
+              <dd>
+                {fmt.bytes(disk.logical(propsOf))} ({t("props.bytes", { count: fmt.count(disk.logical(propsOf)) })})
+              </dd>
+              {disk.isDir(propsOf) && (
+                <>
+                  <dt>{t("props.contains")}</dt>
+                  <dd>{t("tip.files", { count: fmt.count(disk.files(propsOf)) })}</dd>
+                </>
+              )}
+              {propsOf > 0 && (
+                <>
+                  <dt>{t("props.ofParent")}</dt>
+                  <dd>{fmt.pct(disk.size(propsOf) / (disk.size(disk.parent(propsOf)) || 1))}</dd>
+                  <dt>{t("props.ofScan")}</dt>
+                  <dd>{fmt.pct(disk.size(propsOf) / (disk.size(0) || 1))}</dd>
+                </>
+              )}
+              {itemStat?.ok && (
+                <>
+                  <dt>{t("props.created")}</dt>
+                  <dd>{fmt.stamp(itemStat.created)}</dd>
+                  <dt>{t("props.modified")}</dt>
+                  <dd>{fmt.stamp(itemStat.modified)}</dd>
+                  <dt>{t("props.accessed")}</dt>
+                  <dd>{fmt.stamp(itemStat.accessed)}</dd>
+                  <dt>{t("props.readOnly")}</dt>
+                  <dd>{t(itemStat.readOnly ? "props.yes" : "props.no")}</dd>
+                </>
+              )}
+            </dl>
+            {itemStat && !itemStat.ok && <p style={{ marginTop: 12 }}>{t("props.gone")}</p>}
+          </div>
+          <footer>
+            <button className="btn" onClick={() => void window.api.showInFolder(disk.path(propsOf))}>
+              <Icon name="reveal" />
+              {t("act.reveal")}
+            </button>
+            <button className="btn" autoFocus onClick={() => setPropsOf(null)}>
+              {t("issues.close")}
+            </button>
+          </footer>
+        </Dialog>
+      )}
+
+      {dialog === "keys" && (
+        <Dialog wide onClose={() => setDialog(null)}>
+          <header>
+            <h2>{t("keys.title")}</h2>
+          </header>
+          <div className="body">
+            <table className="keys">
+              <tbody>
+                {(
+                  [
+                    [t("keys.scan")],
+                    [t("keys.scanFolder"), MOD + "+O"],
+                    [t("keys.rescan"), "F5"],
+                    [t("keys.stop"), "Esc"],
+                    [t("keys.move")],
+                    [t("keys.open"), "Enter"],
+                    [t("keys.double"), t("keys.doubleKey")],
+                    [t("keys.wheel"), t("keys.wheelKey")],
+                    [t("keys.up"), "Backspace"],
+                    [t("keys.backForward"), "Alt+Left", "Alt+Right"],
+                    [t("keys.find"), MOD + "+F"],
+                    [t("keys.items")],
+                    [t("keys.copyCutPaste"), MOD + "+C", MOD + "+X", MOD + "+V"],
+                    [t("keys.copyPath"), MOD + "+Shift+C"],
+                    [t("keys.trash"), "Delete"],
+                    [t("keys.properties"), "Alt+Enter"],
+                    [t("keys.windowGroup")],
+                    [t("keys.newWindow"), MOD + "+N"],
+                    [t("keys.closeWindow"), MOD + "+W"],
+                    [t("keys.menuBar"), "Alt"],
+                    [t("keys.fullscreen"), "F11"],
+                    [t("keys.thisList"), "F1"],
+                  ] as string[][]
+                ).map((row, i) =>
+                  row.length === 1 ? (
+                    <tr key={i}>
+                      <th colSpan={2}>{row[0]}</th>
+                    </tr>
+                  ) : (
+                    <tr key={i}>
+                      <td>{row[0]}</td>
+                      <td>
+                        {row.slice(1).map((k, j) => (
+                          <span key={k}>
+                            {j > 0 && " "}
+                            <kbd>{k}</kbd>
+                          </span>
+                        ))}
+                      </td>
+                    </tr>
+                  ),
+                )}
+              </tbody>
+            </table>
+          </div>
+          <footer>
+            <button className="btn" autoFocus onClick={() => setDialog(null)}>
+              {t("issues.close")}
+            </button>
+          </footer>
+        </Dialog>
+      )}
+
       {dialog === "about" && (
         <Dialog onClose={() => setDialog(null)}>
           <div className="body" style={{ paddingTop: 16 }}>
             <div className="about">
               <Mark size={44} />
               <div>
-                <div className="name">Diskplot</div>
+                <div className="name">
+                  <Wordmark size={30} />
+                </div>
                 <div>{t("about.line", { version: appVersion })}</div>
                 <div>
                   {t("about.by")}{" "}
@@ -976,7 +1352,7 @@ export function App() {
   );
 }
 
-function Dialog({ children, onClose }: { children: React.ReactNode; onClose: () => void }) {
+function Dialog({ children, onClose, wide }: { children: React.ReactNode; onClose: () => void; wide?: boolean }) {
   const ref = useRef<HTMLDialogElement>(null);
   useEffect(() => {
     const el = ref.current!;
@@ -985,6 +1361,7 @@ function Dialog({ children, onClose }: { children: React.ReactNode; onClose: () 
   return (
     <dialog
       ref={ref}
+      className={wide ? "wide" : undefined}
       onClose={onClose}
       onMouseDown={(e) => {
         if (e.target === e.currentTarget) onClose();

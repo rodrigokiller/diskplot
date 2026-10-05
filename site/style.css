@@ -178,6 +178,24 @@ h3 {
   text-decoration: none;
   margin-right: auto;
 }
+.wordmark {
+  display: grid;
+  font: 600 22px/0.82 var(--display);
+  letter-spacing: -0.015em;
+}
+.wordmark span:first-child {
+  font: 400 0.42em/1 var(--text);
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  padding-left: 0.08em;
+  margin-bottom: 0.1em;
+}
+.wordmark span:last-child {
+  color: var(--t4);
+  text-transform: uppercase;
+  font-size: 1.05em;
+  letter-spacing: 0;
+}
 .top nav {
   display: flex;
   gap: 24px;

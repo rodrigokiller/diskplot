@@ -52,9 +52,15 @@ Diskplot shows the space a file occupies on disk, which is what Windows calls "s
 | Scan a folder | Ctrl+O, or drop a folder on the window |
 | Scan again | F5 |
 | Send to Recycle Bin | Delete |
-| Copy path | Ctrl+C |
+| Copy, cut, paste | Ctrl+C, Ctrl+X, Ctrl+V |
+| Copy path | Ctrl+Shift+C |
+| Properties | Alt+Enter |
+| Back, forward | Alt+Left, Alt+Right |
+| New window | Ctrl+N |
+| Menu bar | Alt |
+| All shortcuts | F1 |
 
-Right click anything for Open, Show in Explorer, Copy path and Send to Recycle Bin. The interface is in English and Brazilian Portuguese (View, Language).
+Right click anything for Open, Show in Explorer, Copy, Cut, Paste, Properties and Send to Recycle Bin. Each window holds one scan; the Window menu opens more and arranges them side by side. The interface is in English and Brazilian Portuguese (View, Language).
 
 ## Building from source
 

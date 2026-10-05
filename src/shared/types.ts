@@ -93,6 +93,35 @@ export interface TrashResult {
   error?: string;
 }
 
+export interface WindowInfo {
+  id: number;
+  title: string;
+  focused: boolean;
+}
+
+// Files waiting to be pasted. A cut moves them, a copy duplicates them.
+export interface FileClip {
+  paths: string[];
+  cut: boolean;
+}
+
+export interface PasteResult {
+  src: string;
+  dest: string;
+  ok: boolean;
+  error?: string;
+}
+
+// One item measured after the scan, ready to be added to it.
+export type Measured =
+  | { ok: true; kind: "file"; name: string; size: number; mtime: number }
+  | { ok: true; kind: "dir"; name: string; table: ScanTable }
+  | { ok: false; error: string };
+
+export type ItemStat =
+  | { ok: true; created: number; modified: number; accessed: number; readOnly: boolean }
+  | { ok: false; error: string };
+
 export type UpdateStatus =
   | { state: "dev" | "checking" | "none" }
   | { state: "available" | "ready"; version: string }
