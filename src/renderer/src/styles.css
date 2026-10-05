@@ -52,6 +52,38 @@
   color-scheme: dark;
 }
 
+/* Grid: white sheet, black line, one blue. The construction grid shows
+   wherever the sheet is empty. */
+:root[data-theme="grid"] {
+  --paper: oklch(1 0 0);
+  --panel: oklch(0.972 0.008 268);
+  --sunken: oklch(0.94 0.014 268);
+  --ink: oklch(0.18 0.005 268);
+  --ink-2: oklch(0.42 0.012 268);
+  --line: oklch(0.87 0.04 270);
+  --line-strong: oklch(0.66 0.07 270);
+
+  --t1: oklch(0.935 0.032 270);
+  --t2: oklch(0.85 0.07 270);
+  --t3: oklch(0.73 0.115 269);
+  --t4: oklch(0.5 0.2 266);
+  --t5: oklch(0.4 0.21 265);
+  --on-weak: oklch(0.22 0.06 268);
+  --on-strong: oklch(0.985 0.005 268);
+
+  --red: oklch(0.56 0.21 28);
+  --red-weak: oklch(0.94 0.035 28);
+  --on-red: oklch(0.985 0.01 28);
+  color-scheme: light;
+}
+:root[data-theme="grid"] .sheet {
+  background-image: linear-gradient(var(--line) 1px, transparent 1px), linear-gradient(90deg, var(--line) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+:root[data-theme="grid"] .sheet-inner > * {
+  background-color: var(--paper);
+}
+
 *,
 *::before,
 *::after {

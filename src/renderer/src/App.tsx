@@ -13,7 +13,7 @@ import { TreeView } from "./components/TreeView";
 import { ChangesPane, ClutterPane, DupesPane, ListPane, TypesPane } from "./components/Panels";
 import type { DupState } from "./components/Panels";
 
-type ThemePref = "system" | "light" | "dark";
+type ThemePref = "system" | "light" | "dark" | "grid";
 type Tab = "tree" | "largest" | "types" | "clutter" | "dupes" | "changes" | "found";
 type Phase = { is: "start" } | { is: "scanning"; root: string } | { is: "failed"; root: string; error: string } | { is: "ready" };
 
@@ -40,7 +40,7 @@ function save(key: string, value: string): void {
 
 export function App() {
   const [lang, setLang] = useState<Lang>(initialLang);
-  const [themePref, setThemePref] = useState<ThemePref>(() => load("theme", ["system", "light", "dark"] as const, "system"));
+  const [themePref, setThemePref] = useState<ThemePref>(() => load("theme", ["system", "light", "dark", "grid"] as const, "system"));
   const [systemDark, setSystemDark] = useState(() => window.matchMedia("(prefers-color-scheme: dark)").matches);
   const theme = themePref === "system" ? (systemDark ? "dark" : "light") : themePref;
   const t = useMemo(() => makeT(lang), [lang]);
@@ -363,9 +363,9 @@ export function App() {
       { label: t("menu.zoomRoot"), disabled: !ready || zoom === 0, run: () => zoomTo(0) },
       { kind: "sep" },
       { kind: "title", label: t("menu.theme") },
-      ...(["system", "light", "dark"] as const).map(
+      ...(["system", "light", "dark", "grid"] as const).map(
         (v): MenuEntry => ({
-          label: t(v === "system" ? "menu.themeSystem" : v === "light" ? "menu.themeLight" : "menu.themeDark"),
+          label: t(v === "system" ? "menu.themeSystem" : v === "light" ? "menu.themeLight" : v === "dark" ? "menu.themeDark" : "menu.themeGrid"),
           checked: themePref === v,
           run: () => {
             setThemePref(v);
