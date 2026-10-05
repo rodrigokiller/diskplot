@@ -1,0 +1,65 @@
+import { contextBridge, ipcRenderer, webUtils } from "electron";
+import type { IpcRendererEvent } from "electron";
+import type {
+  DriveInfo,
+  DupCandidate,
+  DupGroup,
+  DupProgress,
+  ScanProgress,
+  ScanTable,
+  SnapshotMeta,
+  SnapshotTable,
+  TrashResult,
+  UpdateStatus,
+} from "../shared/types";
+
+// Main to renderer events return an unsubscribe function, for effect cleanup.
+function on<A extends unknown[]>(channel: string, cb: (...args: A) => void): () => void {
+  const h = (_e: IpcRendererEvent, ...args: unknown[]): void => cb(...(args as A));
+  ipcRenderer.on(channel, h);
+  return () => ipcRenderer.off(channel, h);
+}
+
+const api = {
+  listDrives: (): Promise<DriveInfo[]> => ipcRenderer.invoke("drives:list"),
+  pathForFile: (file: File): string => webUtils.getPathForFile(file),
+  pickFolder: (): Promise<string | null> => ipcRenderer.invoke("dialog:pickFolder"),
+
+  startScan: (root: string): Promise<{ ok: boolean; root?: string; error?: string }> =>
+    ipcRenderer.invoke("scan:start", root),
+  cancelScan: (): Promise<void> => ipcRenderer.invoke("scan:cancel"),
+  onScanProgress: (cb: (p: ScanProgress) => void) => on("scan:progress", cb),
+  onScanDone: (cb: (t: ScanTable, snapshot: SnapshotMeta | null) => void) => on("scan:done", cb),
+  onScanError: (cb: (error: string) => void) => on("scan:error", cb),
+
+  listSnapshots: (root: string): Promise<SnapshotMeta[]> => ipcRenderer.invoke("snap:list", root),
+  loadSnapshot: (file: string): Promise<{ ok: boolean; snapshot?: SnapshotTable; error?: string }> =>
+    ipcRenderer.invoke("snap:load", file),
+
+  startDuplicates: (candidates: DupCandidate[]): Promise<void> => ipcRenderer.invoke("dup:start", candidates),
+  cancelDuplicates: (): Promise<void> => ipcRenderer.invoke("dup:cancel"),
+  onDupProgress: (cb: (p: DupProgress) => void) => on("dup:progress", cb),
+  onDupDone: (cb: (groups: DupGroup[]) => void) => on("dup:done", cb),
+  onDupError: (cb: (error: string) => void) => on("dup:error", cb),
+
+  showInFolder: (path: string): Promise<void> => ipcRenderer.invoke("shell:showInFolder", path),
+  openPath: (path: string): Promise<string> => ipcRenderer.invoke("shell:openPath", path),
+  openExternal: (url: string): Promise<void> => ipcRenderer.invoke("shell:openExternal", url),
+  trash: (paths: string[]): Promise<TrashResult[]> => ipcRenderer.invoke("shell:trash", paths),
+  copyText: (text: string): Promise<void> => ipcRenderer.invoke("clipboard:write", text),
+
+  setOverlay: (symbolColor: string): Promise<void> => ipcRenderer.invoke("win:setOverlay", symbolColor),
+  toggleFullScreen: (): Promise<void> => ipcRenderer.invoke("win:toggleFullScreen"),
+  toggleDevTools: (): Promise<void> => ipcRenderer.invoke("win:devtools"),
+  info: (): Promise<{ version: string; platform: string; home: string }> => ipcRenderer.invoke("app:info"),
+  quit: (): Promise<void> => ipcRenderer.invoke("app:quit"),
+
+  checkUpdate: (): Promise<void> => ipcRenderer.invoke("upd:check"),
+  downloadUpdate: (): Promise<void> => ipcRenderer.invoke("upd:download"),
+  installUpdate: (): Promise<void> => ipcRenderer.invoke("upd:install"),
+  onUpdateStatus: (cb: (s: UpdateStatus) => void) => on("upd:status", cb),
+};
+
+contextBridge.exposeInMainWorld("api", api);
+
+export type Api = typeof api;

@@ -1,0 +1,321 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Diskplot: analisador de espaço em disco grátis para Windows, com treemap e árvore</title>
+    <meta
+      name="description"
+      content="O Diskplot mostra o que está enchendo o seu disco em um treemap e em uma árvore ordenável, lado a lado. Grátis e de código aberto para Windows 10 e 11. Compara scans, encontra tralha de desenvolvimento e arquivos duplicados."
+    />
+    <link rel="canonical" href="https://rodrigokiller.github.io/diskplot/pt/" />
+    <link rel="alternate" hreflang="en" href="https://rodrigokiller.github.io/diskplot/" />
+    <link rel="alternate" hreflang="pt-BR" href="https://rodrigokiller.github.io/diskplot/pt/" />
+    <link rel="alternate" hreflang="x-default" href="https://rodrigokiller.github.io/diskplot/" />
+    <link rel="icon" href="../favicon.ico" sizes="any" />
+    <link rel="icon" href="../icon.svg" type="image/svg+xml" />
+    <meta name="theme-color" content="#f2f6f3" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#141a18" media="(prefers-color-scheme: dark)" />
+    <meta property="og:type" content="website" />
+    <meta property="og:locale" content="pt_BR" />
+    <meta property="og:title" content="Diskplot: veja o que está enchendo o seu disco" />
+    <meta property="og:description" content="Analisador de espaço em disco grátis e de código aberto para Windows. Treemap e árvore na mesma janela." />
+    <meta property="og:url" content="https://rodrigokiller.github.io/diskplot/pt/" />
+    <meta property="og:image" content="https://rodrigokiller.github.io/diskplot/img/og.png" />
+    <meta name="twitter:card" content="summary_large_image" />
+    <link rel="preload" href="../fonts/barlow-semi-condensed-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin />
+    <link rel="stylesheet" href="../style.css" />
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "SoftwareApplication",
+        "name": "Diskplot",
+        "description": "Analisador de espaço em disco para Windows que mostra um treemap e uma árvore ordenável lado a lado.",
+        "applicationCategory": "UtilitiesApplication",
+        "operatingSystem": "Windows 10, Windows 11",
+        "url": "https://rodrigokiller.github.io/diskplot/pt/",
+        "downloadUrl": "https://github.com/rodrigokiller/diskplot/releases/latest",
+        "license": "https://opensource.org/license/mit",
+        "isAccessibleForFree": true,
+        "inLanguage": "pt-BR",
+        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "BRL" }
+      }
+    </script>
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@type": "FAQPage",
+        "mainEntity": [
+          {
+            "@type": "Question",
+            "name": "O Diskplot é grátis mesmo?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Sim. O Diskplot usa a licença MIT. Pode usar em casa e no trabalho sem pagar, e pode ler e alterar o código fonte." }
+          },
+          {
+            "@type": "Question",
+            "name": "O Diskplot precisa de permissão de administrador?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Não. Ele escaneia tudo o que a sua conta consegue ler. As pastas que não consegue abrir são contadas e listadas. Execute como administrador se quiser incluir essas pastas." }
+          },
+          {
+            "@type": "Question",
+            "name": "Por que os tamanhos são diferentes dos do Explorador de Arquivos?",
+            "acceptedAnswer": { "@type": "Answer", "text": "O Diskplot mostra o espaço que o arquivo ocupa no disco. Arquivos compactados, esparsos e arquivos do OneDrive que estão só na nuvem ocupam menos do que o tamanho indica, e o Diskplot conta o que eles ocupam de verdade." }
+          },
+          {
+            "@type": "Question",
+            "name": "É seguro apagar arquivos pelo Diskplot?",
+            "acceptedAnswer": { "@type": "Answer", "text": "Nada é removido sem confirmação, e o que é removido vai para a Lixeira. O Diskplot nunca apaga nada sozinho." }
+          }
+        ]
+      }
+    </script>
+  </head>
+  <body>
+    <header class="top">
+      <div class="wrap">
+        <a class="brand" href="./" aria-label="Diskplot, início">
+          <svg width="24" height="24" viewBox="0 0 32 32" aria-hidden="true">
+            <path d="M6 6h8v20H6z" fill="var(--t4)" />
+            <path d="M0 0h32v32H0zM4 4v24h24V4z" fill="currentColor" fill-rule="evenodd" />
+            <path d="M16 4h3v24h-3zM19 14.5h9v3h-9z" fill="currentColor" />
+          </svg>
+          Diskplot
+        </a>
+        <nav aria-label="Seções">
+          <a href="#views">Duas vistas</a>
+          <a href="#new">O que há de novo</a>
+          <a href="#speed">Velocidade</a>
+          <a href="#compare">Comparado</a>
+          <a href="#faq">Perguntas</a>
+          <a href="../" lang="en" hreflang="en">English</a>
+        </nav>
+        <a class="btn small" href="https://github.com/rodrigokiller/diskplot/releases/latest">Baixar</a>
+      </div>
+    </header>
+
+    <main>
+      <div class="hero wrap">
+        <div class="hero-head">
+          <h1>Veja o que está enchendo o seu disco.</h1>
+          <div>
+            <p>
+              O Diskplot desenha a unidade do jeito que um arquiteto desenha uma planta baixa.
+              <strong>Cada pasta é um cômodo, do tamanho do que ela guarda.</strong> O que pesa mais aparece mais escuro.
+            </p>
+            <div class="cta">
+              <a class="btn" href="https://github.com/rodrigokiller/diskplot/releases/latest">
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true">
+                  <path d="M8 2v8M4.5 7 8 10.5 11.5 7M2.5 13.5h11" />
+                </svg>
+                Baixar para Windows
+              </a>
+              <a class="btn line" href="https://github.com/rodrigokiller/diskplot">Código no GitHub</a>
+            </div>
+            <p class="fine">Grátis e de código aberto, licença MIT. Windows 10 e 11. Sem conta, sem telemetria.</p>
+          </div>
+        </div>
+
+        <div class="sheet">
+          <div class="crumbs" id="crumbs" aria-label="Caminho no exemplo"></div>
+          <div class="plan" id="plan" role="group" aria-label="Exemplo interativo de um disco desenhado como planta"></div>
+          <div class="titleblock">
+            <div><span class="k">Local</span><span class="v">Disco de exemplo</span></div>
+            <div><span class="k">Medido</span><span class="v" id="measured"></span></div>
+            <div class="grow hide-s"><span class="k">Nota</span><span class="v">Dados inventados, desenhados como o programa desenha um scan real</span></div>
+            <div class="scale"><i></i><span><span class="k">Escala</span><span class="v" id="scale"></span></span></div>
+          </div>
+        </div>
+      </div>
+
+      <section id="views" class="wrap">
+        <h2>O mapa e a lista, na mesma janela.</h2>
+        <p class="lede">
+          O SpaceSniffer nos deu o mapa. O WizTree nos deu a árvore ordenável. O Diskplot mantém os dois na tela e liga um ao outro: aponte para um
+          bloco e a linha dele acende, escolha uma linha e o bloco dela é contornado na planta.
+        </p>
+        <figure class="shot">
+          <picture>
+            <source srcset="../img/plan-dark.png" media="(prefers-color-scheme: dark)" />
+            <img src="../img/plan-light.png" width="1440" height="900" alt="Diskplot mostrando o treemap de uma unidade à esquerda e a árvore de pastas com tamanhos à direita" />
+          </picture>
+          <figcaption>Um scan real. Uma tinta, cinco valores: quanto mais escuro o bloco, maior a fatia dele no que você está vendo.</figcaption>
+        </figure>
+      </section>
+
+      <section id="new" class="wrap">
+        <h2>Quatro coisas além do mapa.</h2>
+        <div class="schedule">
+          <div>
+            <h3>O que cresceu desde a última vez</h3>
+            <div>
+              <p>
+                Cada scan deixa um pequeno retrato guardado. Escaneie o mesmo lugar no mês que vem e a aba Mudanças lista as pastas que engordaram,
+                as novas e o que sumiu. O crescimento aparece marcado em vermelho na planta.
+              </p>
+            </div>
+          </div>
+          <div>
+            <h3>Tralha de desenvolvimento, somada</h3>
+            <div>
+              <p>
+                node_modules, saída de build, caches de gerenciadores de pacotes, ambientes virtuais, pastas temporárias e caches de navegador são
+                reconhecidos e somados, para você saber quanto volta antes de remover qualquer coisa.
+              </p>
+            </div>
+          </div>
+          <div>
+            <h3>Busca por nome, tamanho e idade</h3>
+            <div>
+              <p>
+                Digite parte de um nome e os resultados aparecem enquanto você digita, do maior para o menor, em milhões de arquivos. Restrinja por
+                tamanho mínimo, por tempo sem alteração ou por tipo.
+              </p>
+            </div>
+          </div>
+          <div>
+            <h3>Arquivos duplicados</h3>
+            <div>
+              <p>
+                Arquivos do mesmo tamanho são comparados pelo conteúdo: uma passada rápida nos primeiros e últimos bytes e um hash completo só nos
+                que continuam iguais. Roda quando você pede, não durante o scan.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section id="clutter" class="wrap">
+        <div class="split">
+          <div>
+            <h2>Remover é uma decisão, então ele pergunta.</h2>
+            <p class="lede">
+              Nada sai do seu disco sem confirmação, e o que você remove vai para a Lixeira. O Diskplot não limpa nada sozinho e não tem botão de
+              resolver tudo.
+            </p>
+          </div>
+          <figure class="shot">
+            <img src="../img/clutter-light.png" width="1440" height="900" loading="lazy" alt="A aba de tralha listando pastas node_modules agrupadas como dependências instaladas, com os tamanhos" />
+            <figcaption>A aba de tralha em uma pasta de projetos (interface em inglês).</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section id="speed" class="wrap">
+        <h2>Rápido sem pedir permissão de administrador.</h2>
+        <p class="lede">
+          O Diskplot lista as pastas em lote pela API de diretórios do Windows, em todos os núcleos, sem abrir arquivo por arquivo. Por isso os
+          tamanhos que você vê são o espaço ocupado no disco, não só o comprimento do arquivo.
+        </p>
+        <table>
+          <thead>
+            <tr>
+              <th>O que foi escaneado</th>
+              <th class="num">Arquivos</th>
+              <th class="num">Pastas</th>
+              <th class="num">Tempo</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Uma pasta de projetos de código</td>
+              <td class="num">634.060</td>
+              <td class="num">67.152</td>
+              <td class="num">1,9 s</td>
+            </tr>
+            <tr>
+              <td>Um perfil de usuário inteiro</td>
+              <td class="num">2.148.709</td>
+              <td class="num">574.860</td>
+              <td class="num">10,0 s</td>
+            </tr>
+          </tbody>
+        </table>
+        <p class="note">
+          Medido no desktop Windows 11 do autor, com o cache de arquivos quente, versão 0.1.0. O primeiro scan depois de ligar o computador demora
+          mais, e o seu disco não é este disco.
+        </p>
+      </section>
+
+      <section id="compare" class="wrap">
+        <h2>Como ele fica ao lado dos outros.</h2>
+        <div class="compare">
+          <div>
+            <h3>WizTree</h3>
+            <p>
+              Lê a tabela de arquivos do NTFS direto, o que ganha de qualquer ferramenta que percorre pastas, o Diskplot incluído. Isso exige
+              permissão de administrador. É de código fechado e pede licença paga para uso no trabalho.
+            </p>
+          </div>
+          <div>
+            <h3>SpaceSniffer</h3>
+            <p>
+              O treemap em que muita gente aprendeu a olhar o disco assim, e o motivo de o Diskplot usar uma cor só. É gratuito e de código
+              fechado, e não tem vista em árvore.
+            </p>
+          </div>
+          <div>
+            <h3>WinDirStat</h3>
+            <p>
+              De código aberto como o Diskplot, com árvore e treemap colorido por tipo de arquivo. O Diskplot acrescenta a comparação de scans e a
+              soma da tralha, e imprime o mapa em uma cor só.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <section id="faq" class="wrap">
+        <h2>As perguntas que vêm primeiro.</h2>
+        <div class="faq">
+          <details>
+            <summary>É grátis mesmo?</summary>
+            <p>Sim. O Diskplot usa a licença MIT. Use em casa e no trabalho sem pagar, e leia ou altere o código se quiser.</p>
+          </details>
+          <details>
+            <summary>Precisa de permissão de administrador?</summary>
+            <p>
+              Não. Ele escaneia tudo o que a sua conta consegue ler. As pastas que não consegue abrir são contadas e listadas, para você saber o
+              que ficou fora do total. Execute como administrador se quiser incluir essas pastas.
+            </p>
+          </details>
+          <details>
+            <summary>Por que os tamanhos são diferentes dos do Explorador de Arquivos?</summary>
+            <p>
+              O Diskplot mostra o espaço que o arquivo ocupa no disco. Arquivos compactados, esparsos e arquivos do OneDrive que estão só na nuvem
+              ocupam menos do que o tamanho indica, e o Diskplot conta o que eles ocupam de verdade. Um arquivo com vários hard links é contado uma
+              vez por nome.
+            </p>
+          </details>
+          <details>
+            <summary>Ele envia alguma coisa sobre os meus arquivos para algum lugar?</summary>
+            <p>Não. O único acesso à rede é ao GitHub, para ver se existe uma versão mais nova.</p>
+          </details>
+          <details>
+            <summary>Tem versão para macOS ou Linux?</summary>
+            <p>Ainda não. Hoje só Windows 10 e 11 são suportados.</p>
+          </details>
+        </div>
+      </section>
+    </main>
+
+    <div class="close">
+      <div class="wrap">
+        <h2>Seu disco está cheio de alguma coisa. Vá olhar.</h2>
+        <div class="cta">
+          <a class="btn" href="https://github.com/rodrigokiller/diskplot/releases/latest">Baixar para Windows</a>
+          <a class="btn line" href="https://github.com/rodrigokiller/diskplot">Código no GitHub</a>
+        </div>
+      </div>
+    </div>
+
+    <footer>
+      <div class="wrap">
+        <span>O Diskplot é software livre sob a licença MIT.</span>
+        <a href="https://github.com/rodrigokiller/diskplot/issues">Relatar um problema</a>
+        <a href="https://github.com/rodrigokiller/diskplot/releases">Notas de versão</a>
+        <a href="../" lang="en" hreflang="en">English</a>
+      </div>
+    </footer>
+
+    <script src="../demo.js" defer></script>
+  </body>
+</html>

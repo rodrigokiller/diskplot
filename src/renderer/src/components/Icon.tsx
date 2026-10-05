@@ -1,0 +1,69 @@
+import type { ReactNode } from "react";
+
+// Diskplot's own icon set. 16px grid, 1.5px strokes, square caps and mitred
+// joins, right angles wherever the shape allows it.
+const paths: Record<string, ReactNode> = {
+  folder: <path d="M1.75 3.75h4.5v2h8v7.5H1.75z" />,
+  file: <path d="M3.75 1.75h5.5v3h3v9.5h-8.5z" />,
+  drive: (
+    <>
+      <path d="M1.75 4.75h12.5v6.5H1.75z" />
+      <path d="M10.75 7.25h1.5v1.5h-1.5z" fill="currentColor" stroke="none" />
+    </>
+  ),
+  chevron: <path d="M6 3.5 10.5 8 6 12.5" />,
+  scan: (
+    <>
+      <path d="M1.75 5.5V1.75H5.5M10.5 1.75h3.75V5.5M14.25 10.5v3.75H10.5M5.5 14.25H1.75V10.5" />
+      <path d="M6 6h4v4H6z" fill="currentColor" stroke="none" />
+    </>
+  ),
+  rescan: <path d="M13.25 7.5v5.75H2.75V2.75h7M7.75.5 10 2.75 7.75 5" />,
+  stop: <path d="M4 4h8v8H4z" fill="currentColor" stroke="none" />,
+  search: <path d="M2.75 2.75h7.5v7.5h-7.5zM10.25 10.25l3.5 3.5" />,
+  close: <path d="M3.5 3.5l9 9M12.5 3.5l-9 9" />,
+  trash: <path d="M2.25 4.25h11.5M6 4.25v-2.5h4v2.5M3.75 4.25v10h8.5v-10M6.75 7v4.5M9.25 7v4.5" />,
+  reveal: <path d="M9.25 2.75h4v4M13.25 2.75 7.5 8.5M11 9.75v3.5H2.75V5h3.5" />,
+  copy: <path d="M5.75 5.75h7.5v7.5h-7.5zM10.25 5.5V2.75h-7.5v7.5H5.5" />,
+  enter: <path d="M2.75 2.75h10.5v10.5H2.75zM8 5.25v5.5M5.25 8h5.5" />,
+  up: <path d="M8 13V3.5M4 7.25 8 3.25l4 4" />,
+  warn: <path d="M2.75 2.75h10.5v10.5H2.75zM8 5v4M8 10.5v1" />,
+  link: <path d="M6.5 3.25h6.25V9.5M12.75 3.25 3.5 12.5" />,
+  check: <path d="M3 8.5 6.5 12 13 4.5" />,
+  dot: <path d="M5.5 5.5h5v5h-5z" fill="currentColor" stroke="none" />,
+  sortDown: <path d="M4 6h8l-4 5z" fill="currentColor" stroke="none" />,
+  sortUp: <path d="M4 10h8L8 5z" fill="currentColor" stroke="none" />,
+  open: <path d="M2.75 13.25V2.75h4.5v2h6v8.5zM2.75 7.75h10.5" />,
+};
+
+export type IconName = keyof typeof paths;
+
+export function Icon({ name, size = 16, className }: { name: IconName; size?: number; className?: string }) {
+  return (
+    <svg
+      className={className}
+      width={size}
+      height={size}
+      viewBox="0 0 16 16"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.5"
+      strokeLinecap="square"
+      strokeLinejoin="miter"
+      aria-hidden="true"
+    >
+      {paths[name]}
+    </svg>
+  );
+}
+
+// The mark: a square plot, partitioned, with one room filled in.
+export function Mark({ size = 18 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 32 32" aria-hidden="true">
+      <path d="M6 6h8v20H6z" fill="var(--t4)" />
+      <path d="M0 0h32v32H0zM4 4v24h24V4z" fill="currentColor" fillRule="evenodd" />
+      <path d="M16 4h3v24h-3zM19 14.5h9v3h-9z" fill="currentColor" />
+    </svg>
+  );
+}
