@@ -12,12 +12,7 @@ const paths: Record<string, ReactNode> = {
     </>
   ),
   chevron: <path d="M6 3.5 10.5 8 6 12.5" />,
-  contrast: (
-    <>
-      <path d="M2.75 2.75h10.5v10.5H2.75z" />
-      <path d="M2.75 2.75H8v10.5H2.75z" fill="currentColor" stroke="none" />
-    </>
-  ),
+  sun: <path d="M5.75 5.75h4.5v4.5h-4.5zM8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.5 1.5M11.5 11.5 13 13M13 3l-1.5 1.5M4.5 11.5 3 13" />,
   back: <path d="M9.5 3.5 5 8l4.5 4.5M5 8h8.5" />,
   forward: <path d="M6.5 3.5 11 8l-4.5 4.5M11 8H2.5" />,
   scan: (

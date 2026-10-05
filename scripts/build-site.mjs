@@ -31,7 +31,7 @@ const en = {
   source: "Source on GitHub",
   h1: "Disk space analyzer for Windows.",
   lead: "Diskplot scans a drive or a folder and shows what is using the space, as a treemap and a sortable tree in one window.",
-  fine: "Free and open source, MIT license. Windows 10 and 11. No account, no telemetry.",
+  fine: "Free and open source, MIT license. Windows 10 and 11; Linux and macOS builds are experimental. No account, no telemetry.",
   demo: { path: "Path in the sample", plan: "Interactive sample of the treemap", loc: "Location", sample: "Sample disk", measured: "Measured", note: "Note", noteText: "Sample data. Click a folder to open it.", scale: "Scale" },
   views: {
     h: "Treemap and tree in one window.",
@@ -84,10 +84,10 @@ const en = {
       ["Does it need administrator rights?", "No. It scans everything the current account can read. Folders it cannot open are counted and listed. Run it as administrator to include them."],
       ["Why do sizes differ from File Explorer?", "Diskplot reports the space allocated on disk. Compressed files, sparse files and online-only OneDrive files occupy less than their length. A file with several hard links is counted once per name."],
       ["Does it send data anywhere?", "No. The only network request is to GitHub, to check for a newer version."],
-      ["Is there a version for macOS or Linux?", "Not yet. Windows 10 and 11 are the supported systems."],
+      ["Is there a version for macOS or Linux?", "Yes, as experimental builds on the download page: an AppImage for Linux and a .dmg for macOS on Apple Silicon. They are lightly tested and the scan is slower there. Windows 10 and 11 are the supported systems."],
     ],
   },
-  close: { h: "Download Diskplot", p: "Installer and portable build for Windows 10 and 11." },
+  close: { h: "Download Diskplot", p: "Installer and portable build for Windows 10 and 11. Experimental builds for Linux and macOS." },
   foot: ["Diskplot is free software under the MIT license.", "Report a problem", "Release notes", "Made by"],
 };
 
@@ -116,7 +116,7 @@ const pt = {
   source: "Código no GitHub",
   h1: "Analisador de espaço em disco para Windows.",
   lead: "O Diskplot escaneia uma unidade ou uma pasta e mostra o que está ocupando o espaço, em um treemap e em uma árvore ordenável na mesma janela.",
-  fine: "Grátis e de código aberto, licença MIT. Windows 10 e 11. Sem conta, sem telemetria.",
+  fine: "Grátis e de código aberto, licença MIT. Windows 10 e 11; as versões para Linux e macOS são experimentais. Sem conta, sem telemetria.",
   demo: { path: "Caminho no exemplo", plan: "Exemplo interativo do treemap", loc: "Local", sample: "Disco de exemplo", measured: "Medido", note: "Nota", noteText: "Dados de exemplo. Clique em uma pasta para abrir.", scale: "Escala" },
   views: {
     h: "Treemap e árvore na mesma janela.",
@@ -169,10 +169,10 @@ const pt = {
       ["Precisa de permissão de administrador?", "Não. Ele escaneia tudo o que a conta atual consegue ler. As pastas que não consegue abrir são contadas e listadas. Execute como administrador para incluí-las."],
       ["Por que os tamanhos são diferentes dos do Explorador de Arquivos?", "O Diskplot mostra o espaço alocado no disco. Arquivos compactados, esparsos e arquivos do OneDrive que estão só online ocupam menos do que o tamanho indica. Um arquivo com vários hard links é contado uma vez por nome."],
       ["Ele envia dados para algum lugar?", "Não. O único acesso à rede é ao GitHub, para verificar se existe uma versão mais nova."],
-      ["Tem versão para macOS ou Linux?", "Ainda não. Os sistemas suportados são Windows 10 e 11."],
+      ["Tem versão para macOS ou Linux?", "Sim, como versões experimentais na página de downloads: um AppImage para Linux e um .dmg para macOS em Apple Silicon. Foram pouco testadas e o scan é mais lento nelas. Os sistemas suportados são Windows 10 e 11."],
     ],
   },
-  close: { h: "Baixe o Diskplot", p: "Instalador e versão portátil para Windows 10 e 11." },
+  close: { h: "Baixe o Diskplot", p: "Instalador e versão portátil para Windows 10 e 11. Versões experimentais para Linux e macOS." },
   foot: ["O Diskplot é software livre sob a licença MIT.", "Relatar um problema", "Notas de versão", "Feito por"],
 };
 
@@ -217,8 +217,7 @@ function downloadPage(t) {
     <link rel="alternate" hreflang="pt-BR" href="${BASE}pt/download/" />
     <link rel="icon" href="${up}favicon.ico" sizes="any" />
     <link rel="icon" href="${up}icon.svg" type="image/svg+xml" />
-    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#11121a" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#ffffff" />
     <meta property="og:title" content="${esc(t.dl.title)}" />
     <meta property="og:url" content="${url}" />
     <meta property="og:image" content="${BASE}img/og.png" />
@@ -263,9 +262,8 @@ function downloadPage(t) {
 function themeToggle(t) {
   const label = t.lang === "en" ? "Switch between light and dark" : "Alternar entre claro e escuro";
   return `<button class="theme-toggle" id="theme" type="button" aria-label="${label}" title="${label}">
-          <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-            <path d="M2.75 2.75h10.5v10.5H2.75z" fill="none" stroke="currentColor" stroke-width="1.5" />
-            <path d="M2.75 2.75H8v10.5H2.75z" fill="currentColor" />
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square" aria-hidden="true">
+            <path d="M5.75 5.75h4.5v4.5h-4.5zM8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.5 1.5M11.5 11.5 13 13M13 3l-1.5 1.5M4.5 11.5 3 13" />
           </svg>
         </button>`;
 }

@@ -24,7 +24,7 @@
     <link rel="stylesheet" href="../style.css" />
     <script src="../theme.js"></script>
     <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Diskplot","description":"Analisador de espaço em disco para Windows que mostra um treemap e uma árvore ordenável lado a lado.","applicationCategory":"UtilitiesApplication","operatingSystem":"Windows 10, Windows 11","url":"https://www.diskplot.com/pt/","downloadUrl":"https://www.diskplot.com/pt/download/","license":"https://opensource.org/license/mit","isAccessibleForFree":true,"inLanguage":"pt-BR","author":{"@type":"Person","name":"Rodrigo Sanguanini","url":"https://sanguanini.dev"},"offers":{"@type":"Offer","price":"0","priceCurrency":"BRL"}}</script>
-    <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"É grátis?","acceptedAnswer":{"@type":"Answer","text":"Sim. O Diskplot usa a licença MIT e pode ser usado em casa e no trabalho sem custo."}},{"@type":"Question","name":"Precisa de permissão de administrador?","acceptedAnswer":{"@type":"Answer","text":"Não. Ele escaneia tudo o que a conta atual consegue ler. As pastas que não consegue abrir são contadas e listadas. Execute como administrador para incluí-las."}},{"@type":"Question","name":"Por que os tamanhos são diferentes dos do Explorador de Arquivos?","acceptedAnswer":{"@type":"Answer","text":"O Diskplot mostra o espaço alocado no disco. Arquivos compactados, esparsos e arquivos do OneDrive que estão só online ocupam menos do que o tamanho indica. Um arquivo com vários hard links é contado uma vez por nome."}},{"@type":"Question","name":"Ele envia dados para algum lugar?","acceptedAnswer":{"@type":"Answer","text":"Não. O único acesso à rede é ao GitHub, para verificar se existe uma versão mais nova."}},{"@type":"Question","name":"Tem versão para macOS ou Linux?","acceptedAnswer":{"@type":"Answer","text":"Ainda não. Os sistemas suportados são Windows 10 e 11."}}]}</script>
+    <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"É grátis?","acceptedAnswer":{"@type":"Answer","text":"Sim. O Diskplot usa a licença MIT e pode ser usado em casa e no trabalho sem custo."}},{"@type":"Question","name":"Precisa de permissão de administrador?","acceptedAnswer":{"@type":"Answer","text":"Não. Ele escaneia tudo o que a conta atual consegue ler. As pastas que não consegue abrir são contadas e listadas. Execute como administrador para incluí-las."}},{"@type":"Question","name":"Por que os tamanhos são diferentes dos do Explorador de Arquivos?","acceptedAnswer":{"@type":"Answer","text":"O Diskplot mostra o espaço alocado no disco. Arquivos compactados, esparsos e arquivos do OneDrive que estão só online ocupam menos do que o tamanho indica. Um arquivo com vários hard links é contado uma vez por nome."}},{"@type":"Question","name":"Ele envia dados para algum lugar?","acceptedAnswer":{"@type":"Answer","text":"Não. O único acesso à rede é ao GitHub, para verificar se existe uma versão mais nova."}},{"@type":"Question","name":"Tem versão para macOS ou Linux?","acceptedAnswer":{"@type":"Answer","text":"Sim, como versões experimentais na página de downloads: um AppImage para Linux e um .dmg para macOS em Apple Silicon. Foram pouco testadas e o scan é mais lento nelas. Os sistemas suportados são Windows 10 e 11."}}]}</script>
   </head>
   <body>
     <header class="top">
@@ -48,9 +48,8 @@
         </nav>
         <div class="lang" role="group" aria-label="Language"><a href="../" lang="en" hreflang="en" title="English">EN</a><span aria-current="true" title="Português">PT</span></div>
         <button class="theme-toggle" id="theme" type="button" aria-label="Alternar entre claro e escuro" title="Alternar entre claro e escuro">
-          <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
-            <path d="M2.75 2.75h10.5v10.5H2.75z" fill="none" stroke="currentColor" stroke-width="1.5" />
-            <path d="M2.75 2.75H8v10.5H2.75z" fill="currentColor" />
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="square" aria-hidden="true">
+            <path d="M5.75 5.75h4.5v4.5h-4.5zM8 1v2M8 13v2M1 8h2M13 8h2M3 3l1.5 1.5M11.5 11.5 13 13M13 3l-1.5 1.5M4.5 11.5 3 13" />
           </svg>
         </button>
         <a class="btn small" href="download/">Baixar</a>
@@ -73,7 +72,7 @@
                 </a>
                 <a class="btn line" href="https://github.com/rodrigokiller/diskplot">Código no GitHub</a>
               </div>
-              <p class="fine">Grátis e de código aberto, licença MIT. Windows 10 e 11. Sem conta, sem telemetria.</p>
+              <p class="fine">Grátis e de código aberto, licença MIT. Windows 10 e 11; as versões para Linux e macOS são experimentais. Sem conta, sem telemetria.</p>
             </div>
           </div>
 
@@ -233,7 +232,7 @@
           </details>
           <details>
             <summary>Tem versão para macOS ou Linux?</summary>
-            <p>Ainda não. Os sistemas suportados são Windows 10 e 11.</p>
+            <p>Sim, como versões experimentais na página de downloads: um AppImage para Linux e um .dmg para macOS em Apple Silicon. Foram pouco testadas e o scan é mais lento nelas. Os sistemas suportados são Windows 10 e 11.</p>
           </details>
         </div>
       </section>
@@ -243,7 +242,7 @@
       <div class="wrap">
         <div>
           <h2>Baixe o Diskplot</h2>
-          <p>Instalador e versão portátil para Windows 10 e 11.</p>
+          <p>Instalador e versão portátil para Windows 10 e 11. Versões experimentais para Linux e macOS.</p>
         </div>
         <div class="cta">
           <a class="btn" href="download/">Baixar para Windows</a>

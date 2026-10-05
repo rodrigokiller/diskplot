@@ -46,7 +46,7 @@ function save(key: string, value: string): void {
 export function App() {
   const [lang, setLang] = useState<Lang>(initialLang);
   const [family, setFamily] = useState<Family>(() => load("family", FAMILIES, "grid"));
-  const [mode, setMode] = useState<Mode>(() => load("mode", MODES, "system"));
+  const [mode, setMode] = useState<Mode>(() => load("mode", MODES, "light"));
   const [systemDark, setSystemDark] = useState(() => window.matchMedia("(prefers-color-scheme: dark)").matches);
   const dark = mode === "system" ? systemDark : mode === "dark";
   // The value the stylesheet keys on.
@@ -615,7 +615,7 @@ export function App() {
             save("mode", next);
           }}
         >
-          <Icon name="contrast" />
+          <Icon name="sun" />
         </button>
       </header>
 
