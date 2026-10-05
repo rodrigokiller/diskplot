@@ -22,6 +22,7 @@
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="preload" href="../fonts/barlow-semi-condensed-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="../style.css" />
+    <script src="../theme.js"></script>
     <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Diskplot","description":"Analisador de espaço em disco para Windows que mostra um treemap e uma árvore ordenável lado a lado.","applicationCategory":"UtilitiesApplication","operatingSystem":"Windows 10, Windows 11","url":"https://www.diskplot.com/pt/","downloadUrl":"https://www.diskplot.com/pt/download/","license":"https://opensource.org/license/mit","isAccessibleForFree":true,"inLanguage":"pt-BR","author":{"@type":"Person","name":"Rodrigo Sanguanini","url":"https://sanguanini.dev"},"offers":{"@type":"Offer","price":"0","priceCurrency":"BRL"}}</script>
     <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"É grátis?","acceptedAnswer":{"@type":"Answer","text":"Sim. O Diskplot usa a licença MIT e pode ser usado em casa e no trabalho sem custo."}},{"@type":"Question","name":"Precisa de permissão de administrador?","acceptedAnswer":{"@type":"Answer","text":"Não. Ele escaneia tudo o que a conta atual consegue ler. As pastas que não consegue abrir são contadas e listadas. Execute como administrador para incluí-las."}},{"@type":"Question","name":"Por que os tamanhos são diferentes dos do Explorador de Arquivos?","acceptedAnswer":{"@type":"Answer","text":"O Diskplot mostra o espaço alocado no disco. Arquivos compactados, esparsos e arquivos do OneDrive que estão só online ocupam menos do que o tamanho indica. Um arquivo com vários hard links é contado uma vez por nome."}},{"@type":"Question","name":"Ele envia dados para algum lugar?","acceptedAnswer":{"@type":"Answer","text":"Não. O único acesso à rede é ao GitHub, para verificar se existe uma versão mais nova."}},{"@type":"Question","name":"Tem versão para macOS ou Linux?","acceptedAnswer":{"@type":"Answer","text":"Ainda não. Os sistemas suportados são Windows 10 e 11."}}]}</script>
   </head>
@@ -46,6 +47,12 @@
           <a href="#faq">Perguntas</a>
         </nav>
         <div class="lang" role="group" aria-label="Language"><a href="../" lang="en" hreflang="en" title="English">EN</a><span aria-current="true" title="Português">PT</span></div>
+        <button class="theme-toggle" id="theme" type="button" aria-label="Alternar entre claro e escuro" title="Alternar entre claro e escuro">
+          <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M2.75 2.75h10.5v10.5H2.75z" fill="none" stroke="currentColor" stroke-width="1.5" />
+            <path d="M2.75 2.75H8v10.5H2.75z" fill="currentColor" />
+          </svg>
+        </button>
         <a class="btn small" href="download/">Baixar</a>
       </div>
     </header>

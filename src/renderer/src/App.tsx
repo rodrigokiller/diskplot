@@ -605,6 +605,18 @@ export function App() {
           ))}
         </nav>
         <div className="titlebar-path">{ready ? disk.path(zoom) : phase.is === "scanning" ? phase.root : ""}</div>
+        <button
+          className="menu-button titlebar-tool"
+          title={t("menu.toggleMode")}
+          aria-label={t("menu.toggleMode")}
+          onClick={() => {
+            const next = dark ? "light" : "dark";
+            setMode(next);
+            save("mode", next);
+          }}
+        >
+          <Icon name="contrast" />
+        </button>
       </header>
 
       {notice && (

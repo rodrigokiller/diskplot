@@ -115,13 +115,14 @@ if (!yes) {
 }
 
 // 1) bump + commit + push (a release aponta pra esse commit)
-run(`npm version ${next} --no-git-tag-version`);
+run(`npm version ${next} --no-git-tag-version --allow-same-version`);
 if (ci) {
   // as notas viajam no proprio repositorio: o fluxo le notes/<tag>.md ao publicar
   if (!existsSync("notes")) mkdirSync("notes");
   writeFileSync(written, notes.trimEnd() + "\n");
   run(`git add package.json package-lock.json notes`);
-  run(`git commit -m "chore(release): ${tag}"`);
+  // --allow-empty: a primeira versao nao muda o package.json
+  run(`git commit --allow-empty -m "chore(release): ${tag}"`);
   run(`git tag ${tag}`);
   run(`git push`);
   run(`git push origin ${tag}`);

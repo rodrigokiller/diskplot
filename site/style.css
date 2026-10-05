@@ -50,7 +50,7 @@
 }
 
 @media (prefers-color-scheme: dark) {
-  :root {
+  :root:not([data-theme="light"]) {
     --paper: oklch(0.17 0.012 268);
     --panel: oklch(0.21 0.016 268);
     --ink: oklch(0.95 0.006 268);
@@ -67,7 +67,30 @@
     --plane: oklch(0.42 0.19 265);
     --on-plane: oklch(0.99 0.004 268);
     --red: oklch(0.7 0.18 30);
+    color-scheme: dark;
   }
+}
+:root[data-theme="dark"] {
+  --paper: oklch(0.17 0.012 268);
+  --panel: oklch(0.21 0.016 268);
+  --ink: oklch(0.95 0.006 268);
+  --ink-2: oklch(0.74 0.02 268);
+  --line: oklch(0.25 0.03 268);
+  --line-strong: oklch(0.45 0.06 268);
+  --t1: oklch(0.27 0.05 268);
+  --t2: oklch(0.35 0.09 267);
+  --t3: oklch(0.44 0.14 266);
+  --t4: oklch(0.68 0.13 268);
+  --t5: oklch(0.84 0.075 270);
+  --on-weak: oklch(0.94 0.02 268);
+  --on-strong: oklch(0.17 0.04 268);
+  --plane: oklch(0.42 0.19 265);
+  --on-plane: oklch(0.99 0.004 268);
+  --red: oklch(0.7 0.18 30);
+  color-scheme: dark;
+}
+:root[data-theme="light"] {
+  color-scheme: light;
 }
 
 *,
@@ -225,6 +248,21 @@ h3 {
   font-size: 0.95rem;
 }
 
+.theme-toggle {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--ink);
+  background: none;
+  color: var(--ink);
+  cursor: pointer;
+  padding: 0;
+}
+.theme-toggle:hover {
+  background: var(--t1);
+  color: var(--on-weak);
+}
 .lang {
   display: flex;
   border: 1px solid var(--ink);

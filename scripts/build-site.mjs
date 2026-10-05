@@ -223,6 +223,7 @@ function downloadPage(t) {
     <meta property="og:url" content="${url}" />
     <meta property="og:image" content="${BASE}img/og.png" />
     <link rel="stylesheet" href="${up}style.css" />
+    <script src="${up}theme.js"></script>
   </head>
   <body>
     <header class="top">
@@ -235,6 +236,7 @@ function downloadPage(t) {
           <a href="../">${t.dl.back}</a>
         </nav>
         ${langSwitch(t, "download/")}
+        ${themeToggle(t)}
         <a class="btn small line" href="${REPO}">GitHub</a>
       </div>
     </header>
@@ -256,6 +258,16 @@ function downloadPage(t) {
   </body>
 </html>
 `;
+}
+
+function themeToggle(t) {
+  const label = t.lang === "en" ? "Switch between light and dark" : "Alternar entre claro e escuro";
+  return `<button class="theme-toggle" id="theme" type="button" aria-label="${label}" title="${label}">
+          <svg width="16" height="16" viewBox="0 0 16 16" aria-hidden="true">
+            <path d="M2.75 2.75h10.5v10.5H2.75z" fill="none" stroke="currentColor" stroke-width="1.5" />
+            <path d="M2.75 2.75H8v10.5H2.75z" fill="currentColor" />
+          </svg>
+        </button>`;
 }
 
 function page(t) {
@@ -306,6 +318,7 @@ function page(t) {
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="preload" href="${up}fonts/barlow-semi-condensed-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="${up}style.css" />
+    <script src="${up}theme.js"></script>
     <script type="application/ld+json">${JSON.stringify(appLd)}</script>
     <script type="application/ld+json">${JSON.stringify(faqLd)}</script>
   </head>
@@ -320,6 +333,7 @@ function page(t) {
           ${t.nav.map((label, i) => `<a href="#${ids[i]}">${label}</a>`).join("\n          ")}
         </nav>
         ${langSwitch(t, "")}
+        ${themeToggle(t)}
         <a class="btn small" href="download/">${t.download}</a>
       </div>
     </header>
