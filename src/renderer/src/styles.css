@@ -992,9 +992,17 @@ p {
 /* The scan's own numbers, docked under the schedule while it runs. */
 .dock {
   flex: none;
-  border-top: 2px solid var(--ink);
+  border-top: 1px solid var(--line-strong);
   background: var(--paper);
   transform-origin: top left;
+}
+/* The same bar that separates the plan from the schedule, lying down. */
+.dock::before {
+  content: "";
+  display: block;
+  height: 4px;
+  background: var(--panel);
+  border-bottom: 1px solid var(--line);
 }
 .dock-head {
   display: flex;
