@@ -1,16 +1,23 @@
 // Writes site/index.html and site/pt/index.html from one template, so the two
 // languages cannot drift apart. Run with: npm run site:build
-import { writeFileSync } from "node:fs";
+import { mkdirSync, writeFileSync } from "node:fs";
 
 const BASE = "https://diskplot.vercel.app/";
 const REPO = "https://github.com/rodrigokiller/diskplot";
-const DOWNLOAD = REPO + "/releases/latest";
+const RELEASES = REPO + "/releases";
 
 const en = {
   lang: "en",
   locale: "en_US",
   path: "",
   other: { href: "pt/", lang: "pt-BR", label: "Português" },
+  dl: {
+    title: "Download Diskplot for Windows",
+    description: "Download the Diskplot installer or the portable build for Windows 10 and 11, with release notes for every version.",
+    h: "Download",
+    lead: "Free and open source. The installer updates itself; the portable build is a single executable that needs no installation.",
+    back: "Back to the overview",
+  },
   currency: "USD",
   title: "Diskplot: free disk space analyzer for Windows, with treemap and tree",
   description:
@@ -89,6 +96,13 @@ const pt = {
   locale: "pt_BR",
   path: "pt/",
   other: { href: "../", lang: "en", label: "English" },
+  dl: {
+    title: "Baixar o Diskplot para Windows",
+    description: "Baixe o instalador ou a versão portátil do Diskplot para Windows 10 e 11, com as notas de cada versão.",
+    h: "Baixar",
+    lead: "Grátis e de código aberto. O instalador se atualiza sozinho; a versão portátil é um único executável que não precisa de instalação.",
+    back: "Voltar para a visão geral",
+  },
   currency: "BRL",
   title: "Diskplot: analisador de espaço em disco grátis para Windows, com treemap e árvore",
   description:
@@ -171,6 +185,79 @@ const MARK = `<svg width="24" height="24" viewBox="0 0 32 32" aria-hidden="true"
             <path d="M25 25h5v5h-5z" fill="var(--t2)" opacity="0.6" />
           </svg>`;
 
+// Two square cells, the current language filled in. `sub` is the page's own
+// folder inside the language root ("" or "download/").
+function langSwitch(t, sub) {
+  const toOther = (sub ? "../" : "") + t.other.href + sub;
+  const cells = [
+    { code: "EN", lang: "en", name: "English" },
+    { code: "PT", lang: "pt-BR", name: "Português" },
+  ];
+  return `<div class="lang" role="group" aria-label="Language">${cells
+    .map((c) =>
+      c.lang === t.lang
+        ? `<span aria-current="true" title="${c.name}">${c.code}</span>`
+        : `<a href="${toOther}" lang="${c.lang}" hreflang="${c.lang}" title="${c.name}">${c.code}</a>`,
+    )
+    .join("")}</div>`;
+}
+
+function downloadPage(t) {
+  const up = t.path ? "../../" : "../";
+  const url = BASE + t.path + "download/";
+  return `<!doctype html>
+<html lang="${t.lang}">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>${esc(t.dl.title)}</title>
+    <meta name="description" content="${esc(t.dl.description)}" />
+    <link rel="canonical" href="${url}" />
+    <link rel="alternate" hreflang="en" href="${BASE}download/" />
+    <link rel="alternate" hreflang="pt-BR" href="${BASE}pt/download/" />
+    <link rel="icon" href="${up}favicon.ico" sizes="any" />
+    <link rel="icon" href="${up}icon.svg" type="image/svg+xml" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#11121a" media="(prefers-color-scheme: dark)" />
+    <meta property="og:title" content="${esc(t.dl.title)}" />
+    <meta property="og:url" content="${url}" />
+    <meta property="og:image" content="${BASE}img/og.png" />
+    <link rel="stylesheet" href="${up}style.css" />
+  </head>
+  <body>
+    <header class="top">
+      <div class="wrap">
+        <a class="brand" href="../" aria-label="Diskplot">
+          ${MARK}
+          Diskplot
+        </a>
+        <nav>
+          <a href="../">${t.dl.back}</a>
+        </nav>
+        ${langSwitch(t, "download/")}
+        <a class="btn small line" href="${REPO}">GitHub</a>
+      </div>
+    </header>
+    <main class="wrap downloads">
+      <h1>${t.dl.h}</h1>
+      <p class="lede">${t.dl.lead}</p>
+      <div id="latest" class="latest" aria-live="polite"></div>
+      <div id="versions"></div>
+      <noscript><p class="lede"><a href="${RELEASES}">github.com/rodrigokiller/diskplot/releases</a></p></noscript>
+    </main>
+    <footer>
+      <div class="wrap">
+        <span>${t.foot[0]}</span>
+        <a href="${RELEASES}">GitHub Releases</a>
+        <span>${t.foot[3]} <a href="https://sanguanini.dev">Rodrigo Sanguanini</a></span>
+      </div>
+    </footer>
+    <script src="${up}releases.js" defer></script>
+  </body>
+</html>
+`;
+}
+
 function page(t) {
   const up = t.path ? "../" : "";
   const url = BASE + t.path;
@@ -187,7 +274,7 @@ function page(t) {
     applicationCategory: "UtilitiesApplication",
     operatingSystem: "Windows 10, Windows 11",
     url,
-    downloadUrl: DOWNLOAD,
+    downloadUrl: url + "download/",
     license: "https://opensource.org/license/mit",
     isAccessibleForFree: true,
     inLanguage: t.lang,
@@ -231,9 +318,9 @@ function page(t) {
         </a>
         <nav>
           ${t.nav.map((label, i) => `<a href="#${ids[i]}">${label}</a>`).join("\n          ")}
-          <a href="${t.other.href}" lang="${t.other.lang}" hreflang="${t.other.lang}">${t.other.label}</a>
         </nav>
-        <a class="btn small" href="${DOWNLOAD}">${t.download}</a>
+        ${langSwitch(t, "")}
+        <a class="btn small" href="download/">${t.download}</a>
       </div>
     </header>
 
@@ -245,7 +332,7 @@ function page(t) {
             <div>
               <p>${t.lead}</p>
               <div class="cta">
-                <a class="btn" href="${DOWNLOAD}">
+                <a class="btn" href="download/">
                   <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true">
                     <path d="M8 2v8M4.5 7 8 10.5 11.5 7M2.5 13.5h11" />
                   </svg>
@@ -346,7 +433,7 @@ function page(t) {
           <p>${t.close.p}</p>
         </div>
         <div class="cta">
-          <a class="btn" href="${DOWNLOAD}">${t.downloadFull}</a>
+          <a class="btn" href="download/">${t.downloadFull}</a>
           <a class="btn line" href="${REPO}">${t.source}</a>
         </div>
       </div>
@@ -358,7 +445,6 @@ function page(t) {
         <a href="${REPO}/issues">${t.foot[1]}</a>
         <a href="${REPO}/releases">${t.foot[2]}</a>
         <span>${t.foot[3]} <a href="https://sanguanini.dev">Rodrigo Sanguanini</a></span>
-        <a href="${t.other.href}" lang="${t.other.lang}" hreflang="${t.other.lang}">${t.other.label}</a>
       </div>
     </footer>
 
@@ -370,11 +456,15 @@ function page(t) {
 
 writeFileSync("site/index.html", page(en));
 writeFileSync("site/pt/index.html", page(pt));
+mkdirSync("site/download", { recursive: true });
+mkdirSync("site/pt/download", { recursive: true });
+writeFileSync("site/download/index.html", downloadPage(en));
+writeFileSync("site/pt/download/index.html", downloadPage(pt));
 writeFileSync(
   "site/sitemap.xml",
   `<?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
-${["", "pt/"].map((p) => `  <url>\n    <loc>${BASE}${p}</loc>\n    <xhtml:link rel="alternate" hreflang="en" href="${BASE}" />\n    <xhtml:link rel="alternate" hreflang="pt-BR" href="${BASE}pt/" />\n  </url>`).join("\n")}
+${["", "pt/", "download/", "pt/download/"].map((p) => `  <url>\n    <loc>${BASE}${p}</loc>\n    <xhtml:link rel="alternate" hreflang="en" href="${BASE}" />\n    <xhtml:link rel="alternate" hreflang="pt-BR" href="${BASE}pt/" />\n  </url>`).join("\n")}
 </urlset>
 `,
 );

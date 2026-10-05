@@ -72,14 +72,24 @@ for (const s of log) {
   if (type === "chore") continue; // chores (inclui o proprio commit de release) ficam fora das notas
   (G[type] ?? G.outros).push(text);
 }
-const LBL = { feat: "Novidades", fix: "Correcoes", perf: "Desempenho", refactor: "Refatoracoes", docs: "Documentacao", outros: "Outros" };
-let notes = notesFile
-  ? readFileSync(notesFile, "utf8")
-  : Object.keys(LBL)
-      .filter((k) => G[k].length)
-      .map((k) => `### ${LBL[k]}\n` + G[k].map((t) => `- ${t}`).join("\n"))
-      .join("\n\n");
-if (!notes.trim()) notes = "Manutencao e melhorias internas.";
+// As notas saem em dois blocos, um por idioma, marcados com <!--lang:xx-->. A pagina de
+// downloads do site mostra so o bloco do idioma dela. Ordem de preferencia:
+//   1) --notes-file f
+//   2) notes/<tag>.md  (escrito a mao, com os dois blocos)
+//   3) gerado do git log: titulos traduzidos, itens como estao nos commits
+const LBL = {
+  en: { feat: "New", fix: "Fixes", perf: "Performance", refactor: "Internal", docs: "Documentation", outros: "Other" },
+  pt: { feat: "Novidades", fix: "Correções", perf: "Desempenho", refactor: "Interno", docs: "Documentação", outros: "Outros" },
+};
+const EMPTY = { en: "Maintenance and internal improvements.", pt: "Manutenção e melhorias internas." };
+const block = (lang) =>
+  `<!--lang:${lang}-->\n` +
+  (Object.keys(LBL[lang])
+    .filter((k) => G[k].length)
+    .map((k) => `### ${LBL[lang][k]}\n` + G[k].map((t) => `- ${t}`).join("\n"))
+    .join("\n\n") || EMPTY[lang]);
+const written = `notes/${tag}.md`;
+const notes = notesFile ? readFileSync(notesFile, "utf8") : existsSync(written) ? readFileSync(written, "utf8") : block("en") + "\n\n" + block("pt");
 
 const productName = pkg.build?.productName ?? pkg.name;
 console.log(`\n=== ${productName}: ${pkg.version} -> ${next}   (${repo}) ===`);

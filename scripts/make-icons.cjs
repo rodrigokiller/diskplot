@@ -7,6 +7,7 @@ const { join } = require("path");
 const root = join(__dirname, "..");
 const svg = readFileSync(join(root, "build/icon.svg"), "utf8");
 const SIZES = [16, 24, 32, 48, 64, 128, 256];
+const LARGE = 1024; // macOS and Linux want a big PNG
 
 let win;
 
@@ -53,7 +54,7 @@ app.whenReady().then(async () => {
   await win.loadURL("about:blank");
   const images = [];
   for (const size of SIZES) images.push({ size, png: await render(size) });
-  writeFileSync(join(root, "build/icon.png"), images[images.length - 1].png);
+  writeFileSync(join(root, "build/icon.png"), await render(LARGE));
   writeFileSync(join(root, "build/icon.ico"), ico(images));
   mkdirSync(join(root, "site"), { recursive: true });
   writeFileSync(join(root, "site/favicon.ico"), ico(images.filter((i) => i.size <= 48)));

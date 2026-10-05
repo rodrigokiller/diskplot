@@ -225,6 +225,151 @@ h3 {
   font-size: 0.95rem;
 }
 
+.lang {
+  display: flex;
+  border: 1px solid var(--ink);
+  font-size: 0.82rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+}
+.lang > * {
+  display: grid;
+  place-items: center;
+  width: 36px;
+  height: 30px;
+  text-decoration: none;
+  color: var(--ink-2);
+}
+.lang > * + * {
+  border-left: 1px solid var(--ink);
+}
+.lang a:hover {
+  background: var(--t1);
+  color: var(--on-weak);
+}
+.lang [aria-current] {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+/* Downloads -------------------------------------------------------------- */
+
+.downloads {
+  padding-top: clamp(32px, 5vw, 64px);
+  min-height: 70vh;
+}
+.latest {
+  margin-top: clamp(24px, 3vw, 40px);
+  border: 2px solid var(--ink);
+}
+.latest-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 16px;
+  padding: 14px 18px;
+  border-bottom: 1px solid var(--line-strong);
+  background: var(--panel);
+}
+.latest-head strong {
+  font-family: var(--display);
+  font-size: 1.7rem;
+  line-height: 1.1;
+}
+.latest-head span {
+  color: var(--ink-2);
+}
+.files {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+}
+.file {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 16px 18px 18px;
+  border-right: 1px solid var(--line-strong);
+  border-bottom: 1px solid var(--line-strong);
+  margin: 0 -1px -1px 0;
+}
+.file .what {
+  font-weight: 600;
+}
+.file .meta {
+  color: var(--ink-2);
+  font-size: 0.92rem;
+  flex: 1;
+}
+.file .btn {
+  margin-top: 10px;
+  align-self: flex-start;
+}
+.notes {
+  padding: 16px 18px 20px;
+  max-width: 76ch;
+}
+.notes h3 {
+  margin: 14px 0 4px;
+}
+.notes h3:first-child {
+  margin-top: 0;
+}
+.notes ul {
+  padding-left: 1.1em;
+}
+.notes li {
+  margin: 2px 0;
+}
+.notes code {
+  font-family: Consolas, "Cascadia Mono", monospace;
+  font-size: 0.92em;
+  background: var(--t1);
+  color: var(--on-weak);
+  padding: 0 4px;
+}
+.versions-title {
+  margin-top: clamp(40px, 6vw, 72px);
+  font-size: clamp(1.5rem, 2.6vw, 2rem);
+}
+.version {
+  border-bottom: 1px solid var(--line-strong);
+}
+.version:first-of-type {
+  border-top: 2px solid var(--ink);
+  margin-top: 16px;
+}
+.version summary {
+  cursor: pointer;
+  list-style: none;
+  display: flex;
+  gap: 16px;
+  align-items: baseline;
+  padding: 12px 0;
+  font-weight: 600;
+}
+.version summary::-webkit-details-marker {
+  display: none;
+}
+.version summary span {
+  font-weight: 400;
+  color: var(--ink-2);
+}
+.version .notes {
+  padding-left: 0;
+}
+.version .assets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+  padding: 0 0 16px;
+  font-size: 0.95rem;
+}
+.empty {
+  padding: 20px 18px;
+  color: var(--ink-2);
+  max-width: 60ch;
+}
+
 /* Hero ------------------------------------------------------------------- */
 
 .hero-band {
@@ -659,6 +804,9 @@ footer .wrap span:first-child {
 @media (max-width: 860px) {
   .top nav {
     display: none;
+  }
+  .top .wrap {
+    gap: 12px;
   }
   .hero-head,
   .split,
