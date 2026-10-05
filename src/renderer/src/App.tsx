@@ -13,22 +13,18 @@ import { TreeView } from "./components/TreeView";
 import { ChangesPane, ClutterPane, DupesPane, ListPane, TypesPane } from "./components/Panels";
 import type { DupState } from "./components/Panels";
 
-type ThemePref = "system" | "light" | "dark" | "grid" | "grid-dark";
-const THEMES = ["system", "light", "dark", "grid", "grid-dark"] as const;
-const THEME_LABEL = {
-  system: "menu.themeSystem",
-  light: "menu.themeLight",
-  dark: "menu.themeDark",
-  grid: "menu.themeGrid",
-  "grid-dark": "menu.themeGridDark",
-} as const;
+type Family = "grid" | "paper";
+type Mode = "system" | "light" | "dark";
+const FAMILIES = ["grid", "paper"] as const;
+const MODES = ["system", "light", "dark"] as const;
 const LEVELS = [2, 3, 4, 5, 6, 0] as const; // 0 means every level
 type Tab = "tree" | "largest" | "types" | "clutter" | "dupes" | "changes" | "found";
 type Phase = { is: "start" } | { is: "scanning"; root: string } | { is: "failed"; root: string; error: string } | { is: "ready" };
 
 const MB = 1024 * 1024;
-const SITE = "https://rodrigokiller.github.io/diskplot/";
+const SITE = "https://diskplot.vercel.app/";
 const REPO = "https://github.com/rodrigokiller/diskplot";
+const AUTHOR_SITE = "https://sanguanini.dev";
 const DUP_IDLE: DupState = { status: "idle", progress: null, groups: [] };
 
 function load<V extends string>(key: string, allowed: readonly V[], fallback: V): V {
@@ -49,9 +45,12 @@ function save(key: string, value: string): void {
 
 export function App() {
   const [lang, setLang] = useState<Lang>(initialLang);
-  const [themePref, setThemePref] = useState<ThemePref>(() => load("theme", THEMES, "system"));
+  const [family, setFamily] = useState<Family>(() => load("family", FAMILIES, "grid"));
+  const [mode, setMode] = useState<Mode>(() => load("mode", MODES, "system"));
   const [systemDark, setSystemDark] = useState(() => window.matchMedia("(prefers-color-scheme: dark)").matches);
-  const theme = themePref === "system" ? (systemDark ? "dark" : "light") : themePref;
+  const dark = mode === "system" ? systemDark : mode === "dark";
+  // The value the stylesheet keys on.
+  const theme = family === "grid" ? (dark ? "grid-dark" : "grid") : dark ? "dark" : "light";
   const t = useMemo(() => makeT(lang), [lang]);
   const fmt = useMemo(() => makeFmt(lang, t), [lang, t]);
 
@@ -410,13 +409,25 @@ export function App() {
       ),
       { kind: "sep" },
       { kind: "title", label: t("menu.theme") },
-      ...THEMES.map(
+      ...FAMILIES.map(
         (v): MenuEntry => ({
-          label: t(THEME_LABEL[v]),
-          checked: themePref === v,
+          label: t(v === "grid" ? "menu.themeGrid" : "menu.themePaper"),
+          checked: family === v,
           run: () => {
-            setThemePref(v);
-            save("theme", v);
+            setFamily(v);
+            save("family", v);
+          },
+        }),
+      ),
+      { kind: "sep" },
+      { kind: "title", label: t("menu.mode") },
+      ...MODES.map(
+        (v): MenuEntry => ({
+          label: t(v === "system" ? "menu.modeSystem" : v === "light" ? "menu.modeLight" : "menu.modeDark"),
+          checked: mode === v,
+          run: () => {
+            setMode(v);
+            save("mode", v);
           },
         }),
       ),
@@ -924,6 +935,18 @@ export function App() {
               <div>
                 <div className="name">Diskplot</div>
                 <div>{t("about.line", { version: appVersion })}</div>
+                <div>
+                  {t("about.by")}{" "}
+                  <a
+                    href={AUTHOR_SITE}
+                    onClick={(e) => {
+                      e.preventDefault();
+                      void window.api.openExternal(AUTHOR_SITE);
+                    }}
+                  >
+                    sanguanini.dev
+                  </a>
+                </div>
               </div>
             </div>
           </div>

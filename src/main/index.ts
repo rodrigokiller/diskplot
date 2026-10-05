@@ -25,7 +25,7 @@ function createWindow(): void {
     minWidth: 920,
     minHeight: 560,
     show: false,
-    backgroundColor: nativeTheme.shouldUseDarkColors ? "#121816" : "#f3f5f1",
+    backgroundColor: nativeTheme.shouldUseDarkColors ? "#11121a" : "#ffffff",
     titleBarStyle: "hidden",
     titleBarOverlay: { color: "#00000000", symbolColor: "#808080", height: BAR_HEIGHT },
     icon: join(__dirname, "../../build/icon.png"),

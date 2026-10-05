@@ -438,3 +438,13 @@ The site shows a small live version of the plan built from HTML elements. It fol
 - **Don't** add font weights beyond 400, 500 and 600, or a monospace face for numbers.
 - **Don't** move or resize columns while a scan is running. Only values change.
 - **Don't** use Barlow Semi Condensed in the app. It is the display face of the site only.
+
+## Themes and brand (update)
+
+The brand is now the Grid theme: a white sheet, black line and one blue ink. The icon, the landing page and the default theme of the app all use it. The green palette documented above remains in the app as the Paper theme.
+
+The app has two themes, Grid and Paper, and each has a light and a dark mode. The mode follows Windows unless the user picks one. The stylesheet keys on `data-theme`: `grid`, `grid-dark`, `light` (Paper) and `dark` (Paper at night). A new theme is one more block of the same variables in `src/renderer/src/styles.css`.
+
+Grid, light: paper `oklch(1 0 0)`, ink `oklch(0.18 0.005 268)`, ramp from `oklch(0.935 0.032 270)` to `oklch(0.4 0.21 265)`. In the Grid themes the construction grid (24px, in the `line` colour) shows behind the start sheet in the app and behind the hero on the site. The site adds one colour plane, `oklch(0.45 0.21 265)`, used for the closing band and for button hover.
+
+The mark is a small treemap: five blocks, each half the one before it, in the ramp from strong to weak.

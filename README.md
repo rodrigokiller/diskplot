@@ -6,7 +6,7 @@ See what is filling your disk. Diskplot scans a drive or a folder on Windows and
 
 It is free, MIT licensed, and has no account, no ads and no telemetry.
 
-[Website](https://rodrigokiller.github.io/diskplot/) · [Download](https://github.com/rodrigokiller/diskplot/releases/latest) · [Em português](https://rodrigokiller.github.io/diskplot/pt/)
+[Website](https://diskplot.vercel.app/) · [Download](https://github.com/rodrigokiller/diskplot/releases/latest) · [Em português](https://diskplot.vercel.app/pt/)
 
 ## Why another one
 

@@ -1,13 +1,13 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" xmlns:xhtml="http://www.w3.org/1999/xhtml">
   <url>
-    <loc>https://rodrigokiller.github.io/diskplot/</loc>
-    <xhtml:link rel="alternate" hreflang="en" href="https://rodrigokiller.github.io/diskplot/" />
-    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://rodrigokiller.github.io/diskplot/pt/" />
+    <loc>https://diskplot.vercel.app/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://diskplot.vercel.app/" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://diskplot.vercel.app/pt/" />
   </url>
   <url>
-    <loc>https://rodrigokiller.github.io/diskplot/pt/</loc>
-    <xhtml:link rel="alternate" hreflang="en" href="https://rodrigokiller.github.io/diskplot/" />
-    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://rodrigokiller.github.io/diskplot/pt/" />
+    <loc>https://diskplot.vercel.app/pt/</loc>
+    <xhtml:link rel="alternate" hreflang="en" href="https://diskplot.vercel.app/" />
+    <xhtml:link rel="alternate" hreflang="pt-BR" href="https://diskplot.vercel.app/pt/" />
   </url>
 </urlset>

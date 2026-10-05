@@ -4,74 +4,31 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>Diskplot: free disk space analyzer for Windows, with treemap and tree</title>
-    <meta
-      name="description"
-      content="Diskplot shows what is filling your disk as a treemap and a sortable tree, side by side. Free and open source for Windows 10 and 11. Compares scans, finds developer clutter and duplicate files."
-    />
-    <link rel="canonical" href="https://rodrigokiller.github.io/diskplot/" />
-    <link rel="alternate" hreflang="en" href="https://rodrigokiller.github.io/diskplot/" />
-    <link rel="alternate" hreflang="pt-BR" href="https://rodrigokiller.github.io/diskplot/pt/" />
-    <link rel="alternate" hreflang="x-default" href="https://rodrigokiller.github.io/diskplot/" />
+    <meta name="description" content="Diskplot scans a drive and shows what is using the space, as a treemap and a sortable tree in one window. Free and open source for Windows 10 and 11." />
+    <link rel="canonical" href="https://diskplot.vercel.app/" />
+    <link rel="alternate" hreflang="en" href="https://diskplot.vercel.app/" />
+    <link rel="alternate" hreflang="pt-BR" href="https://diskplot.vercel.app/pt/" />
+    <link rel="alternate" hreflang="x-default" href="https://diskplot.vercel.app/" />
     <link rel="icon" href="favicon.ico" sizes="any" />
     <link rel="icon" href="icon.svg" type="image/svg+xml" />
-    <meta name="theme-color" content="#f2f6f3" media="(prefers-color-scheme: light)" />
-    <meta name="theme-color" content="#141a18" media="(prefers-color-scheme: dark)" />
+    <meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#11121a" media="(prefers-color-scheme: dark)" />
     <meta property="og:type" content="website" />
-    <meta property="og:title" content="Diskplot: see what is filling your disk" />
-    <meta property="og:description" content="A free, open source disk space analyzer for Windows. Treemap and tree in one window." />
-    <meta property="og:url" content="https://rodrigokiller.github.io/diskplot/" />
-    <meta property="og:image" content="https://rodrigokiller.github.io/diskplot/img/og.png" />
+    <meta property="og:locale" content="en_US" />
+    <meta property="og:title" content="Diskplot: disk space analyzer for Windows" />
+    <meta property="og:description" content="Treemap and tree in one window. Free and open source." />
+    <meta property="og:url" content="https://diskplot.vercel.app/" />
+    <meta property="og:image" content="https://diskplot.vercel.app/img/og.png" />
     <meta name="twitter:card" content="summary_large_image" />
     <link rel="preload" href="fonts/barlow-semi-condensed-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="style.css" />
-    <script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "SoftwareApplication",
-        "name": "Diskplot",
-        "description": "Disk space analyzer for Windows that shows a treemap and a sortable tree side by side.",
-        "applicationCategory": "UtilitiesApplication",
-        "operatingSystem": "Windows 10, Windows 11",
-        "url": "https://rodrigokiller.github.io/diskplot/",
-        "downloadUrl": "https://github.com/rodrigokiller/diskplot/releases/latest",
-        "license": "https://opensource.org/license/mit",
-        "isAccessibleForFree": true,
-        "offers": { "@type": "Offer", "price": "0", "priceCurrency": "USD" }
-      }
-    </script>
-    <script type="application/ld+json">
-      {
-        "@context": "https://schema.org",
-        "@type": "FAQPage",
-        "mainEntity": [
-          {
-            "@type": "Question",
-            "name": "Is Diskplot really free?",
-            "acceptedAnswer": { "@type": "Answer", "text": "Yes. Diskplot is released under the MIT license. You can use it at home and at work without paying, and you can read and change the source code." }
-          },
-          {
-            "@type": "Question",
-            "name": "Does Diskplot need administrator rights?",
-            "acceptedAnswer": { "@type": "Answer", "text": "No. It scans everything your account can read. Folders it cannot open are counted and listed. Run it as administrator if you want those included." }
-          },
-          {
-            "@type": "Question",
-            "name": "Why are the sizes different from File Explorer?",
-            "acceptedAnswer": { "@type": "Answer", "text": "Diskplot reports the space a file occupies on disk. Compressed files, sparse files and OneDrive files that are online only take less room than their length suggests, and Diskplot counts what they really take." }
-          },
-          {
-            "@type": "Question",
-            "name": "Is it safe to delete files from Diskplot?",
-            "acceptedAnswer": { "@type": "Answer", "text": "Nothing is removed without a confirmation, and removed items go to the Recycle Bin. Diskplot never deletes anything on its own." }
-          }
-        ]
-      }
-    </script>
+    <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Diskplot","description":"Disk space analyzer for Windows that shows a treemap and a sortable tree side by side.","applicationCategory":"UtilitiesApplication","operatingSystem":"Windows 10, Windows 11","url":"https://diskplot.vercel.app/","downloadUrl":"https://github.com/rodrigokiller/diskplot/releases/latest","license":"https://opensource.org/license/mit","isAccessibleForFree":true,"inLanguage":"en","author":{"@type":"Person","name":"Rodrigo Sanguanini","url":"https://sanguanini.dev"},"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}</script>
+    <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Is it free?","acceptedAnswer":{"@type":"Answer","text":"Yes. Diskplot is released under the MIT license and can be used at home and at work at no cost."}},{"@type":"Question","name":"Does it need administrator rights?","acceptedAnswer":{"@type":"Answer","text":"No. It scans everything the current account can read. Folders it cannot open are counted and listed. Run it as administrator to include them."}},{"@type":"Question","name":"Why do sizes differ from File Explorer?","acceptedAnswer":{"@type":"Answer","text":"Diskplot reports the space allocated on disk. Compressed files, sparse files and online-only OneDrive files occupy less than their length. A file with several hard links is counted once per name."}},{"@type":"Question","name":"Does it send data anywhere?","acceptedAnswer":{"@type":"Answer","text":"No. The only network request is to GitHub, to check for a newer version."}},{"@type":"Question","name":"Is there a version for macOS or Linux?","acceptedAnswer":{"@type":"Answer","text":"Not yet. Windows 10 and 11 are the supported systems."}}]}</script>
   </head>
   <body>
     <header class="top">
       <div class="wrap">
-        <a class="brand" href="./" aria-label="Diskplot home">
+        <a class="brand" href="./" aria-label="Diskplot">
           <svg width="24" height="24" viewBox="0 0 32 32" aria-hidden="true">
             <path d="M2 2h13v28H2z" fill="var(--t5)" />
             <path d="M17 2h13v13H17z" fill="var(--t4)" />
@@ -81,9 +38,9 @@
           </svg>
           Diskplot
         </a>
-        <nav aria-label="Sections">
-          <a href="#views">Two views</a>
-          <a href="#new">What is new</a>
+        <nav>
+          <a href="#views">Views</a>
+          <a href="#features">Features</a>
           <a href="#speed">Speed</a>
           <a href="#compare">Compared</a>
           <a href="#faq">Questions</a>
@@ -94,127 +51,113 @@
     </header>
 
     <main>
-      <div class="hero wrap">
-        <div class="hero-head">
-          <h1>See what is filling your disk.</h1>
-          <div>
-            <p>
-              Diskplot draws a drive the way an architect draws a floor plan. <strong>Every folder is a room, sized by what it holds.</strong>
-              The heaviest things get the strongest ink.
-            </p>
-            <div class="cta">
-              <a class="btn" href="https://github.com/rodrigokiller/diskplot/releases/latest">
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true">
-                  <path d="M8 2v8M4.5 7 8 10.5 11.5 7M2.5 13.5h11" />
-                </svg>
-                Download for Windows
-              </a>
-              <a class="btn line" href="https://github.com/rodrigokiller/diskplot">Source on GitHub</a>
+      <div class="hero-band">
+        <div class="hero wrap">
+          <div class="hero-head">
+            <h1>Disk space analyzer for Windows.</h1>
+            <div>
+              <p>Diskplot scans a drive or a folder and shows what is using the space, as a treemap and a sortable tree in one window.</p>
+              <div class="cta">
+                <a class="btn" href="https://github.com/rodrigokiller/diskplot/releases/latest">
+                  <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="square" aria-hidden="true">
+                    <path d="M8 2v8M4.5 7 8 10.5 11.5 7M2.5 13.5h11" />
+                  </svg>
+                  Download for Windows
+                </a>
+                <a class="btn line" href="https://github.com/rodrigokiller/diskplot">Source on GitHub</a>
+              </div>
+              <p class="fine">Free and open source, MIT license. Windows 10 and 11. No account, no telemetry.</p>
             </div>
-            <p class="fine">Free and open source, MIT license. Windows 10 and 11. No account, no telemetry.</p>
           </div>
-        </div>
 
-        <div class="sheet">
-          <div class="crumbs" id="crumbs" aria-label="Path in the example"></div>
-          <div class="plan" id="plan" role="group" aria-label="Interactive example of a disk drawn as a plan"></div>
-          <div class="titleblock">
-            <div><span class="k">Location</span><span class="v">Example disk</span></div>
-            <div><span class="k">Measured</span><span class="v" id="measured"></span></div>
-            <div class="grow hide-s"><span class="k">Note</span><span class="v">Made up data, drawn the way the app draws a real scan</span></div>
-            <div class="scale"><i></i><span><span class="k">Scale</span><span class="v" id="scale"></span></span></div>
+          <div class="sheet">
+            <div class="crumbs" id="crumbs" aria-label="Path in the sample"></div>
+            <div class="plan" id="plan" role="group" aria-label="Interactive sample of the treemap"></div>
+            <div class="titleblock">
+              <div><span class="k">Location</span><span class="v">Sample disk</span></div>
+              <div><span class="k">Measured</span><span class="v" id="measured"></span></div>
+              <div class="grow hide-s"><span class="k">Note</span><span class="v">Sample data. Click a folder to open it.</span></div>
+              <div class="scale"><i></i><span><span class="k">Scale</span><span class="v" id="scale"></span></span></div>
+            </div>
           </div>
         </div>
       </div>
 
       <section id="views" class="wrap">
-        <h2>The map and the list, in one window.</h2>
-        <p class="lede">
-          SpaceSniffer gave us the map. WizTree gave us the sortable tree. Diskplot keeps both on screen and ties them together: point at a block
-          and its row lights up, pick a row and its block is outlined on the plan.
-        </p>
+        <h2>Treemap and tree in one window.</h2>
+        <p class="lede">The treemap shows proportions at a glance. The tree gives exact sizes, file counts and dates, sortable by any column. Selection is shared: pick an item in one view and it is highlighted in the other.</p>
         <figure class="shot">
           <picture>
             <source srcset="img/plan-dark-crop.png" media="(max-width: 600px) and (prefers-color-scheme: dark)" width="880" height="600" />
             <source srcset="img/plan-light-crop.png" media="(max-width: 600px)" width="880" height="600" />
             <source srcset="img/plan-dark.png" media="(prefers-color-scheme: dark)" />
-            <img src="img/plan-light.png" width="1440" height="900" alt="Diskplot showing a treemap of a drive on the left and a tree of folders with sizes on the right" />
+            <img src="img/plan-light.png" width="1440" height="900" alt="Diskplot with a treemap of a drive on the left and a tree of folders with sizes on the right" />
           </picture>
-          <figcaption>A real scan. One ink, five values: the stronger the block, the larger its share of what you are looking at.</figcaption>
+          <figcaption>A scan of a project folder. The shade of a block follows its share of the current view.</figcaption>
         </figure>
       </section>
 
-      <section id="new" class="wrap">
-        <h2>Four things beyond the map.</h2>
+      <section id="features" class="wrap">
+        <h2>Features</h2>
         <div class="schedule">
           <div>
-            <h3>What grew since last time</h3>
-            <div>
-              <p>
-                Every scan leaves a small snapshot. Scan the same place again next month and the Changes tab lists the folders that gained weight,
-                the new ones, and what disappeared. Growth is marked in red on the plan.
-              </p>
-            </div>
+            <h3>Live view</h3>
+            <p>The treemap and the tree fill in while the scan runs. There is no waiting for a progress bar to finish.</p>
           </div>
           <div>
-            <h3>Developer clutter, totalled</h3>
-            <div>
-              <p>
-                node_modules, build output, package manager caches, virtual environments, temp folders and browser caches are recognised and added
-                up, so you know how much comes back before you remove anything.
-              </p>
-            </div>
+            <h3>Scan comparison</h3>
+            <p>Each scan saves a small snapshot. The next scan of the same location lists what grew, what is new and what is gone.</p>
           </div>
           <div>
-            <h3>Find by name, size and age</h3>
-            <div>
-              <p>
-                Type part of a name and the matches appear as you type, largest first, across millions of files. Narrow by minimum size, by how
-                long a file has gone untouched, or by type.
-              </p>
-            </div>
+            <h3>Clutter detection</h3>
+            <p>Recognises node_modules, build output, package manager caches, virtual environments, temp folders and browser caches, and totals them.</p>
+          </div>
+          <div>
+            <h3>Search and filters</h3>
+            <p>Search by name across the whole scan as you type. Filter by minimum size, by age or by file type.</p>
           </div>
           <div>
             <h3>Duplicate files</h3>
-            <div>
-              <p>
-                Files of the same length are compared by content, a quick pass on the first and last bytes and a full hash only for the ones that
-                still match. It runs when you ask for it, not during the scan.
-              </p>
-            </div>
+            <p>Files of equal length are compared by content. Runs on request, not during the scan.</p>
+          </div>
+          <div>
+            <h3>Size on disk</h3>
+            <p>Sizes are the space actually allocated, so compressed, sparse and online-only cloud files are counted for what they occupy.</p>
+          </div>
+          <div>
+            <h3>Folder levels</h3>
+            <p>The treemap opens four levels of folders by default and draws deeper ones as a single block. The limit is adjustable.</p>
+          </div>
+          <div>
+            <h3>Themes</h3>
+            <p>Two themes, each in light and dark. English and Brazilian Portuguese.</p>
           </div>
         </div>
       </section>
 
-      <section id="clutter" class="wrap">
+      <section class="wrap">
         <div class="split">
           <div>
-            <h2>Removing is a decision, so it asks.</h2>
-            <p class="lede">
-              Nothing leaves your disk without a confirmation, and what you remove goes to the Recycle Bin. Diskplot does not clean anything on its
-              own and has no one-click fix.
-            </p>
+            <h2>Nothing is deleted without confirmation.</h2>
+            <p class="lede">Removed items go to the Recycle Bin. There is no automatic cleanup and no one-click fix.</p>
           </div>
           <figure class="shot">
             <picture>
               <source srcset="img/clutter-dark.png" media="(prefers-color-scheme: dark)" />
-              <img src="img/clutter-light.png" width="580" height="270" loading="lazy" alt="The Clutter tab listing node_modules folders grouped under installed dependencies with their sizes" />
+              <img src="img/clutter-light.png" width="580" height="270" loading="lazy" alt="The Clutter tab listing node_modules and build folders with their sizes" />
             </picture>
-            <figcaption>The Clutter tab on the folder that holds Diskplot itself.</figcaption>
+            <figcaption>The Clutter tab.</figcaption>
           </figure>
         </div>
       </section>
 
       <section id="speed" class="wrap">
-        <h2>Fast without asking for administrator rights.</h2>
-        <p class="lede">
-          Diskplot lists folders in bulk through the Windows directory API on every core, so no file is opened one by one. It also means the sizes
-          you see are sizes on disk, not just file lengths.
-        </p>
+        <h2>Scan speed</h2>
+        <p class="lede">Folders are listed in bulk through the Windows directory API, in parallel on all cores. Administrator rights are not required.</p>
         <table>
           <thead>
             <tr>
-              <th>What was scanned</th>
+              <th>Scanned</th>
               <th class="num">Files</th>
               <th class="num">Folders</th>
               <th class="num">Time</th>
@@ -228,70 +171,62 @@
               <td class="num">1.9 s</td>
             </tr>
             <tr>
-              <td>A whole user profile</td>
+              <td>A user profile</td>
               <td class="num">2,148,709</td>
               <td class="num">574,860</td>
               <td class="num">10.0 s</td>
             </tr>
+            <tr>
+              <td>A full system drive</td>
+              <td class="num">3,156,306</td>
+              <td class="num">861,554</td>
+              <td class="num">30 s</td>
+            </tr>
           </tbody>
         </table>
-        <p class="note">
-          Measured on the author's Windows 11 desktop with the file cache warm, version 0.1.0. A first scan after boot takes longer, and your disk is
-          not this disk.
-        </p>
+        <p class="note">Measured on the author's Windows 11 desktop with a warm file cache. A first scan after boot takes longer.</p>
       </section>
 
       <section id="compare" class="wrap">
-        <h2>How it sits next to the others.</h2>
+        <h2>Compared with other tools</h2>
         <div class="compare">
           <div>
             <h3>WizTree</h3>
-            <p>
-              Reads the NTFS file table directly, which beats any tool that walks folders, Diskplot included. That needs administrator rights. It is
-              closed source and asks for a paid licence at work.
-            </p>
+            <p>Reads the NTFS file table directly, which is faster than walking folders, Diskplot included. Requires administrator rights. Closed source, with a paid licence for commercial use.</p>
           </div>
           <div>
             <h3>SpaceSniffer</h3>
-            <p>
-              The treemap many of us learned this on, and the reason Diskplot uses one colour. Freeware and closed source, and it has no tree view.
-            </p>
+            <p>A treemap with live updates. Freeware, closed source. No tree view.</p>
           </div>
           <div>
             <h3>WinDirStat</h3>
-            <p>Open source like Diskplot, with a tree and a treemap coloured by file type. Diskplot adds scan comparison and clutter totals, and prints the map in one colour.</p>
+            <p>Open source, with a tree and a treemap coloured by file type. Diskplot adds scan comparison and clutter totals.</p>
           </div>
         </div>
       </section>
 
       <section id="faq" class="wrap">
-        <h2>Questions people ask first.</h2>
+        <h2>Questions</h2>
         <div class="faq">
           <details>
-            <summary>Is it really free?</summary>
-            <p>Yes. Diskplot is released under the MIT license. Use it at home and at work without paying, and read or change the source if you like.</p>
+            <summary>Is it free?</summary>
+            <p>Yes. Diskplot is released under the MIT license and can be used at home and at work at no cost.</p>
           </details>
           <details>
             <summary>Does it need administrator rights?</summary>
-            <p>
-              No. It scans everything your account can read. Folders it cannot open are counted and listed, so you know what is missing from the
-              total. Run it as administrator if you want those included.
-            </p>
+            <p>No. It scans everything the current account can read. Folders it cannot open are counted and listed. Run it as administrator to include them.</p>
           </details>
           <details>
-            <summary>Why are the sizes different from File Explorer?</summary>
-            <p>
-              Diskplot reports the space a file occupies on disk. Compressed files, sparse files and OneDrive files that are online only take less
-              room than their length suggests, and Diskplot counts what they really take. A file with several hard links is counted once per name.
-            </p>
+            <summary>Why do sizes differ from File Explorer?</summary>
+            <p>Diskplot reports the space allocated on disk. Compressed files, sparse files and online-only OneDrive files occupy less than their length. A file with several hard links is counted once per name.</p>
           </details>
           <details>
-            <summary>Does it send anything about my files anywhere?</summary>
-            <p>No. The only network request it makes is to GitHub, to see whether a newer version exists.</p>
+            <summary>Does it send data anywhere?</summary>
+            <p>No. The only network request is to GitHub, to check for a newer version.</p>
           </details>
           <details>
             <summary>Is there a version for macOS or Linux?</summary>
-            <p>Not yet. Windows 10 and 11 are the only supported systems today.</p>
+            <p>Not yet. Windows 10 and 11 are the supported systems.</p>
           </details>
         </div>
       </section>
@@ -299,7 +234,10 @@
 
     <div class="close">
       <div class="wrap">
-        <h2>Your disk is full of something. Go look.</h2>
+        <div>
+          <h2>Download Diskplot</h2>
+          <p>Installer and portable build for Windows 10 and 11.</p>
+        </div>
         <div class="cta">
           <a class="btn" href="https://github.com/rodrigokiller/diskplot/releases/latest">Download for Windows</a>
           <a class="btn line" href="https://github.com/rodrigokiller/diskplot">Source on GitHub</a>
@@ -312,6 +250,7 @@
         <span>Diskplot is free software under the MIT license.</span>
         <a href="https://github.com/rodrigokiller/diskplot/issues">Report a problem</a>
         <a href="https://github.com/rodrigokiller/diskplot/releases">Release notes</a>
+        <span>Made by <a href="https://sanguanini.dev">Rodrigo Sanguanini</a></span>
         <a href="pt/" lang="pt-BR" hreflang="pt-BR">Português</a>
       </div>
     </footer>

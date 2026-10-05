@@ -1147,6 +1147,10 @@ dialog footer {
   gap: 16px;
   align-items: center;
 }
+.about a {
+  color: inherit;
+  text-underline-offset: 3px;
+}
 .about .name {
   font-size: 22px;
   font-weight: 600;
