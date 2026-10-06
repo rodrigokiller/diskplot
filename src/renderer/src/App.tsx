@@ -101,6 +101,9 @@ export function App() {
   const [dialog, setDialog] = useState<"issues" | "about" | "keys" | null>(null);
   const [notice, setNotice] = useState<{ text: string; bad?: boolean; progress?: number; action?: { label: string; run: () => void } } | null>(null);
   const [stopping, setStopping] = useState(false);
+  // What the scan is measured against for a percentage: the drive's used
+  // space, or the last scan of the same folder. Null when there is nothing to go by.
+  const [scanBase, setScanBase] = useState<number | null>(null);
   // The scan's numbers, shown under the schedule while it runs.
   const [dockOpen, setDockOpen] = useState(true);
   // Items added a moment ago, so the plan and the tree can point them out.
@@ -173,12 +176,20 @@ export function App() {
     setDisk(null);
     setTab("tree");
     setPhase({ is: "scanning", root });
+    const norm = (p: string): string => p.replace(/[\\/]+$/, "").toLowerCase();
+    const drive = drives?.find((d) => norm(d.path) === norm(root));
+    if (drive) setScanBase(drive.total - drive.free);
+    else {
+      setScanBase(null);
+      void window.api.listSnapshots(root).then((all) => all.length > 0 && setScanBase(all[0].total));
+    }
     void window.api.cancelDuplicates();
-    void window.api.startScan(root).then((r) => {
+    // The preview goes one level past what the plan opens, so it stays small and quick.
+    void window.api.startScan(root, levels === 0 ? 6 : levels + 1).then((r) => {
       if (!r.ok) setPhase({ is: "failed", root, error: r.error === "ENOENT" ? "missing" : (r.error ?? "") });
       else if (r.root) setPhase({ is: "scanning", root: r.root });
     });
-  }, []);
+  }, [drives, levels]);
 
   useEffect(() => {
     const m = /^#scan=(.+)$/.exec(window.location.hash);
@@ -911,6 +922,7 @@ export function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [disk, zoom, planArea, version]);
 
+  const scanPct = progress && scanBase ? Math.min(0.99, progress.bytes / scanBase) : null;
   const pane = { disk: disk!, version, selected, hover, fmt, t, onSelect: select, onHover: setHover, onZoom: zoomTo, onContext: context };
   const grew = comparison !== null && comparison.rows.some((id) => comparison.delta[id] > 0);
   const tabs: Tab[] = ["tree", "largest", "types", "clutter", "dupes", "changes"];
@@ -1017,7 +1029,7 @@ export function App() {
       {phase.is === "start" && <StartSheet drives={drives} t={t} fmt={fmt} onScan={startScan} onPick={pickFolder} />}
 
       {((phase.is === "scanning" && !live) || phase.is === "failed") && (
-        <ScanSheet phase={phase} progress={progress} t={t} fmt={fmt} onStop={toStart} onRetry={() => startScan(phase.root)} />
+        <ScanSheet phase={phase} progress={progress} pct={scanPct} t={t} fmt={fmt} onStop={toStart} onRetry={() => startScan(phase.root)} />
       )}
 
       {(ready || live) && disk && (
@@ -1046,6 +1058,7 @@ export function App() {
               </span>
               <span className="live-count">
                 {fmt.count(progress?.files ?? 0)} {t("scan.files").toLowerCase()}, {fmt.bytes(progress?.bytes ?? 0)}
+                {scanPct !== null && <strong> {Math.round(scanPct * 100)}%</strong>}
               </span>
               <button
                 className={"btn icon" + (dockOpen ? " on" : "")}
@@ -1235,7 +1248,7 @@ export function App() {
                   }
                 />
               )}
-              {live && dockOpen && <ScanDock progress={progress} t={t} fmt={fmt} onClose={() => setDockOpen(false)} />}
+              {live && dockOpen && <ScanDock progress={progress} pct={scanPct} t={t} fmt={fmt} onClose={() => setDockOpen(false)} />}
             </aside>
           </div>
 
@@ -1633,7 +1646,7 @@ function StartSheet(p: { drives: DriveInfo[] | null; t: T; fmt: Fmt; onScan: (ro
 // dock starts there and travels to its place under the schedule.
 let sheetRect: DOMRect | null = null;
 
-function ScanDock(p: { progress: ScanProgress | null; t: T; fmt: Fmt; onClose: () => void }) {
+function ScanDock(p: { progress: ScanProgress | null; pct: number | null; t: T; fmt: Fmt; onClose: () => void }) {
   const { t, fmt } = p;
   const pr = p.progress;
   const ref = useRef<HTMLDivElement>(null);
@@ -1664,6 +1677,7 @@ function ScanDock(p: { progress: ScanProgress | null; t: T; fmt: Fmt; onClose: (
     <div className="dock" ref={ref}>
       <div className="dock-head">
         {t("scan.dockTitle")}
+        {p.pct !== null && <span>{Math.round(p.pct * 100)}%</span>}
         <span className="path">
           <bdi>{pr?.current ?? ""}</bdi>
         </span>
@@ -1708,6 +1722,7 @@ function ScanDock(p: { progress: ScanProgress | null; t: T; fmt: Fmt; onClose: (
 function ScanSheet(p: {
   phase: { is: "scanning"; root: string } | { is: "failed"; root: string; error: string };
   progress: ScanProgress | null;
+  pct: number | null;
   t: T;
   fmt: Fmt;
   onStop: () => void;
@@ -1723,7 +1738,10 @@ function ScanSheet(p: {
   return (
     <main className="sheet scan">
       <div className="sheet-inner" ref={card}>
-        <h1>{t("scan.title", { root: phase.root })}</h1>
+        <h1>
+          {t("scan.title", { root: phase.root })}
+          {p.pct !== null && phase.is === "scanning" && <span style={{ color: "var(--ink-2)", fontWeight: 400 }}> {Math.round(p.pct * 100)}%</span>}
+        </h1>
         {phase.is === "failed" ? (
           <div className="problem" role="alert">
             <h2>{t("scan.failed")}</h2>

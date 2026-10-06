@@ -31,8 +31,8 @@ const api = {
   pathForFile: (file: File): string => webUtils.getPathForFile(file),
   pickFolder: (): Promise<string | null> => ipcRenderer.invoke("dialog:pickFolder"),
 
-  startScan: (root: string): Promise<{ ok: boolean; root?: string; error?: string }> =>
-    ipcRenderer.invoke("scan:start", root),
+  startScan: (root: string, liveDepth?: number): Promise<{ ok: boolean; root?: string; error?: string }> =>
+    ipcRenderer.invoke("scan:start", root, liveDepth),
   stopScan: (): Promise<void> => ipcRenderer.invoke("scan:stop"),
   cancelScan: (): Promise<void> => ipcRenderer.invoke("scan:cancel"),
   onScanProgress: (cb: (p: ScanProgress) => void) => on("scan:progress", cb),

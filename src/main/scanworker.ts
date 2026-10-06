@@ -12,6 +12,7 @@ interface Job {
   root: string;
   snapshotDir: string;
   quiet?: boolean; // no live preview and no snapshot: used to measure one pasted folder
+  liveDepth?: number; // how deep the preview goes: one level past what the plan opens
 }
 
 const job = workerData as Job;
@@ -213,7 +214,7 @@ function onResult(w: number, res: DirResult): void {
     port.postMessage({ type: "progress", progress: progress() });
   }
   // Often enough for the plan to keep moving, never more than about a tenth of the scan's time.
-  if (!cancelled && !stopping && !job.quiet && now - lastLive > Math.max(380, liveCost * 10)) live();
+  if (!cancelled && !stopping && !job.quiet && now - lastLive > Math.max(150, liveCost * 10)) live();
   dispatch();
 }
 
@@ -221,7 +222,9 @@ function onResult(w: number, res: DirResult): void {
 // While the walk is running, the top levels of what has been measured so far
 // are sent out about once a second so the plan can fill in as it goes.
 
-const LIVE_DEPTH = 5;
+// The preview only carries what the plan can show. Fewer levels mean a
+// smaller table, built and sent more often, and a plan that keeps moving.
+const LIVE_DEPTH = Math.max(3, Math.min(6, job.liveDepth ?? 5));
 let lastLive = Date.now();
 let liveCost = 0;
 

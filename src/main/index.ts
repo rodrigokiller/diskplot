@@ -246,7 +246,7 @@ ipcMain.handle("dialog:pickFolder", async (e) => {
 
 // Scan --------------------------------------------------------------------
 
-ipcMain.handle("scan:start", (e, rootArg: string) => {
+ipcMain.handle("scan:start", (e, rootArg: string, liveDepth?: number) => {
   const s = sessionOf(e);
   if (!s) return { ok: false, error: "ENOWINDOW" };
   stopScan(s);
@@ -256,7 +256,7 @@ ipcMain.handle("scan:start", (e, rootArg: string) => {
   if (!existsSync(root)) return { ok: false, error: "ENOENT" };
 
   const worker = new Worker(join(__dirname, "scanworker.js"), {
-    workerData: { root, snapshotDir: snapshotDir() },
+    workerData: { root, snapshotDir: snapshotDir(), liveDepth: Number(liveDepth) || undefined },
   });
   s.scan = worker;
   const mine = (): boolean => s.scan === worker;
