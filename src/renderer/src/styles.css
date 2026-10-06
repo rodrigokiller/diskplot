@@ -483,6 +483,7 @@ p {
 }
 
 .livebar {
+  position: relative;
   background: var(--t1);
   color: var(--on-weak);
   border-bottom-color: var(--line-strong);
@@ -502,6 +503,16 @@ p {
   direction: rtl;
   text-align: left;
   opacity: 0.8;
+}
+/* How much of the drive is measured, drawn along the foot of the bar. */
+.live-progress {
+  position: absolute;
+  left: 0;
+  bottom: -1px;
+  height: 3px;
+  background: var(--t4);
+  transition: width 600ms var(--ease);
+  pointer-events: none;
 }
 .livebar .live-count {
   white-space: nowrap;

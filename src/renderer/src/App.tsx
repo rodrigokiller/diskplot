@@ -1036,6 +1036,7 @@ export function App() {
         <>
           {live && (
             <div className="toolrow livebar" role="status">
+              {scanPct !== null && <span className="live-progress" style={{ width: Math.round(scanPct * 100) + "%" }} />}
               <button className="btn icon" disabled={trail.back.length === 0} title={t("menu.back") + " (Alt+Left)"} aria-label={t("menu.back")} onClick={() => step("back")}>
                 <Icon name="back" />
               </button>
