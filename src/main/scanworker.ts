@@ -214,7 +214,7 @@ function onResult(w: number, res: DirResult): void {
     port.postMessage({ type: "progress", progress: progress() });
   }
   // Often enough for the plan to keep moving, never more than about a tenth of the scan's time.
-  if (!cancelled && !stopping && !job.quiet && now - lastLive > Math.max(150, liveCost * 10)) live();
+  if (!cancelled && !stopping && !job.quiet && now - lastLive > Math.max(380, liveCost * 10)) live();
   dispatch();
 }
 
