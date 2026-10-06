@@ -9,7 +9,7 @@ const FONT = '12px "Barlow", "Bahnschrift", "Segoe UI", sans-serif';
 const MARK_FLOOR = 4 * 1024 * 1024;
 const ZOOM_MS = 280;
 const FADE_MS = 260;
-const MORPH_MS = 600;
+const MORPH_MS = 480;
 // Above this many blocks a frame takes too long to redraw; the change dissolves instead.
 const MORPH_MAX = 14000;
 
@@ -229,7 +229,6 @@ export const Treemap = memo(function Treemap(p: Props) {
   const anim = useRef(0);
   const wheelAt = useRef(0);
   const shown = useRef<Shown | null>(null);
-  const lastData = useRef(0); // when the numbers last changed
   const { disk, zoom, fmt, t, onArea } = p;
 
   useLayoutEffect(() => {
@@ -339,16 +338,10 @@ export const Treemap = memo(function Treemap(p: Props) {
         h: new Float32Array(n),
       };
       shown.current = { count: n, key: keys, x: frame.x, y: frame.y, w: frame.w, h: frame.h };
-      // The movement lasts until the next update is due, so blocks keep
-      // moving at one pace instead of stopping between updates.
       const start = performance.now();
-      const gap = lastData.current > 0 ? start - lastData.current : MORPH_MS;
-      const duration = Math.max(260, Math.min(MORPH_MS, gap * 1.1));
-      lastData.current = start;
       const step = (now: number): void => {
-        const k = Math.min(1, (now - start) / duration);
-        // Gentle on both ends: a block never jerks when the next update takes over.
-        const e = k < 0.5 ? 2 * k * k : 1 - Math.pow(-2 * k + 2, 2) / 2;
+        const k = Math.min(1, (now - start) / MORPH_MS);
+        const e = 1 - Math.pow(1 - k, 3);
         for (let i = 0; i < n; i++) {
           frame.x[i] = sx[i] + (layout.x[i] - sx[i]) * e;
           frame.y[i] = sy[i] + (layout.y[i] - sy[i]) * e;
@@ -362,7 +355,6 @@ export const Treemap = memo(function Treemap(p: Props) {
       if (MORPH_MS > 0) anim.current = requestAnimationFrame(step);
       from = null;
     } else {
-      if (refreshed) lastData.current = performance.now();
       drawPlan(ctx, layout, disk, zoom, colors, dpr, fmt, delta);
       shown.current = { count: n, key: keys, x: layout.x, y: layout.y, w: layout.w, h: layout.h };
     }
