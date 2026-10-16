@@ -25,6 +25,6 @@ Never publish a version unless the user asks for it in the current conversation 
 - The same renderer runs inside Capacitor. `src/mobile/bridge.ts` provides `window.api` on Android; `android/app/src/main/java/com/diskplot/app/` holds the native plugin, the scanner and the duplicate finder.
 - The table is built by `src/shared/table.ts` on both platforms. Change it there, not in the scanners.
 - Features Android lacks are switched off through `window.api.can`; check it before offering a desktop-only action.
-- Build: `npm run mobile:apk` with `JAVA_HOME` pointing at JDK 23 (Gradle 8.14 does not run on JDK 25) and the SDK in `%LOCALAPPDATA%AndroidSdk`. The APK lands in `android/app/build/outputs/apk/debug/`.
+- Build: `npm run mobile:apk` with `JAVA_HOME` pointing at JDK 23 (Gradle 8.14 does not run on JDK 25) and the SDK in `%LOCALAPPDATA%/Android/Sdk` (written to `android/local.properties`, which git ignores). The APK lands in `android/app/build/outputs/apk/debug/`.
 - An emulator named `diskplot` (Pixel 7, Android 16) exists for testing. Debug builds expose the WebView to Chrome DevTools: `adb forward tcp:9222 localabstract:webview_devtools_remote_<pid>`.
 - Android is not part of the release workflow yet and is not on Google Play.
