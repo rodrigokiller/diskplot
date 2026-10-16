@@ -17,6 +17,7 @@ import type {
   SnapshotTable,
   TrashResult,
   UpdateStatus,
+  Capabilities,
 } from "../shared/types";
 
 // Main to renderer events return an unsubscribe function, for effect cleanup.
@@ -27,6 +28,13 @@ function on<A extends unknown[]>(channel: string, cb: (...args: A) => void): () 
 }
 
 const api = {
+  can: { windows: true, trash: true, reveal: true, update: true, watch: true, fileClipboard: true, drop: true } as Capabilities,
+  compact: false, // a phone-sized screen
+  // Desktop systems let any program read the disk; there is nothing to ask for.
+  access: async (): Promise<boolean> => true,
+  requestAccess: async (): Promise<void> => undefined,
+  onResume: (_cb: () => void): (() => void) => () => undefined,
+
   listDrives: (): Promise<DriveInfo[]> => ipcRenderer.invoke("drives:list"),
   pathForFile: (file: File): string => webUtils.getPathForFile(file),
   pickFolder: (): Promise<string | null> => ipcRenderer.invoke("dialog:pickFolder"),

@@ -154,7 +154,7 @@ const HANDS_OFF: ClutterKind[] = ["system", "recycle"];
 
 type ClutterSort = "size" | "name" | "modified";
 
-export const ClutterPane = memo(function ClutterPane(p: PaneProps & { onTrash: (ids: number[]) => void }) {
+export const ClutterPane = memo(function ClutterPane(p: PaneProps & { onTrash?: (ids: number[]) => void }) {
   const { disk, fmt, t } = p;
   const [sort, setSort] = useState<ClutterSort>("size");
   const [closed, setClosed] = useState<Set<ClutterKind>>(() => new Set());
@@ -242,7 +242,7 @@ export const ClutterPane = memo(function ClutterPane(p: PaneProps & { onTrash: (
                 </div>
                 <div className="num">{fmt.bytes(r.bytes)}</div>
                 <div style={{ padding: 0 }}>
-                  {!HANDS_OFF.includes(r.group) && (
+                  {p.onTrash && !HANDS_OFF.includes(r.group) && (
                     <button
                       className="btn quiet icon"
                       style={{ height: 24, color: "inherit" }}
@@ -250,7 +250,7 @@ export const ClutterPane = memo(function ClutterPane(p: PaneProps & { onTrash: (
                       aria-label={t("clutter.removeGroup")}
                       onClick={(e) => {
                         e.stopPropagation();
-                        p.onTrash(r.ids);
+                        p.onTrash?.(r.ids);
                       }}
                     >
                       <Icon name="trash" />
@@ -264,14 +264,14 @@ export const ClutterPane = memo(function ClutterPane(p: PaneProps & { onTrash: (
             <ItemRow key={r.id} {...p} id={r.id} top={top} grid={CLUTTER_GRID}>
               <div className="num">{fmt.bytes(disk.size(r.id))}</div>
               <div style={{ padding: 0 }}>
-                {!HANDS_OFF.includes(r.kind) && (
+                {p.onTrash && !HANDS_OFF.includes(r.kind) && (
                   <button
                     className="btn quiet icon"
                     style={{ height: 24, color: "inherit" }}
                     title={t("act.trash")}
                     aria-label={t("act.trash")}
                     onMouseDown={(e) => e.stopPropagation()}
-                    onClick={() => p.onTrash([r.id])}
+                    onClick={() => p.onTrash?.([r.id])}
                   >
                     <Icon name="trash" />
                   </button>
@@ -297,7 +297,7 @@ export interface DupState {
 }
 
 export const DupesPane = memo(function DupesPane(
-  p: PaneProps & { state: DupState; setState: (s: DupState) => void; onTrash: (ids: number[]) => void },
+  p: PaneProps & { state: DupState; setState: (s: DupState) => void; onTrash?: (ids: number[]) => void },
 ) {
   const { disk, fmt, t, state, setState } = p;
   const [min, setMin] = useState(10 * MB);
@@ -426,16 +426,18 @@ export const DupesPane = memo(function DupesPane(
             <ItemRow key={r.id} {...p} id={r.id} top={top} grid={DUP_GRID}>
               <div className="num dim">{fmt.date(disk.t.mtime[r.id])}</div>
               <div style={{ padding: 0 }}>
-                <button
-                  className="btn quiet icon"
-                  style={{ height: 24, color: "inherit" }}
-                  title={t("act.trash")}
-                  aria-label={t("act.trash")}
-                  onMouseDown={(e) => e.stopPropagation()}
-                  onClick={() => p.onTrash([r.id])}
-                >
-                  <Icon name="trash" />
-                </button>
+                {p.onTrash && (
+                  <button
+                    className="btn quiet icon"
+                    style={{ height: 24, color: "inherit" }}
+                    title={t("act.trash")}
+                    aria-label={t("act.trash")}
+                    onMouseDown={(e) => e.stopPropagation()}
+                    onClick={() => p.onTrash?.([r.id])}
+                  >
+                    <Icon name="trash" />
+                  </button>
+                )}
               </div>
             </ItemRow>
           );

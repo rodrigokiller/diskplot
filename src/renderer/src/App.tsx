@@ -21,8 +21,10 @@ type Mode = "system" | "light" | "dark";
 const FAMILIES = ["grid", "paper"] as const;
 const MODES = ["system", "light", "dark"] as const;
 const LEVELS = [2, 3, 4, 5, 6, 0] as const; // 0 means every level
-const BAR = ["file", "view", "window", "help"] as const;
-type BarName = (typeof BAR)[number];
+const BAR_ALL = ["file", "view", "window", "help"] as const;
+const can = window.api.can;
+const BAR = BAR_ALL.filter((n) => n !== "window" || can.windows);
+type BarName = (typeof BAR_ALL)[number];
 // Shown in menus and in the shortcut list. The Mac spells the modifier its own way.
 const MOD = navigator.platform.toLowerCase().includes("mac") ? "Cmd" : "Ctrl";
 type Tab = "tree" | "largest" | "types" | "clutter" | "dupes" | "changes" | "found";
@@ -63,6 +65,7 @@ export function App() {
 
   const [phase, setPhase] = useState<Phase>({ is: "start" });
   const [drives, setDrives] = useState<DriveInfo[] | null>(null);
+  const [access, setAccess] = useState(true);
   const [progress, setProgress] = useState<ScanProgress | null>(null);
   const [disk, setDisk] = useState<Disk | null>(null);
   const [version, setVersion] = useState(0);
@@ -155,6 +158,18 @@ export function App() {
   }, [titleRoot]);
 
   // Start ------------------------------------------------------------------
+
+  // Android asks for access in its own settings screen; check again on return.
+  useEffect(() => {
+    const check = (): void => {
+      void window.api.access().then((ok) => {
+        setAccess(ok);
+        if (ok) void window.api.listDrives().then(setDrives);
+      });
+    };
+    check();
+    return window.api.onResume(check);
+  }, []);
 
   const refreshDrives = useCallback(() => {
     void window.api.listDrives().then(setDrives);
@@ -475,13 +490,16 @@ export function App() {
       const path = disk.path(id);
       const dir = disk.isDir(id);
       const done = phase.is === "ready";
-      const items: MenuEntry[] = [
-        { label: t("act.open"), icon: "open", run: () => void window.api.openPath(path) },
-        { label: t("act.reveal"), icon: "reveal", run: () => void window.api.showInFolder(path) },
-      ];
+      const items: MenuEntry[] = can.reveal
+        ? [
+            { label: t("act.open"), icon: "open", run: () => void window.api.openPath(path) },
+            { label: t("act.reveal"), icon: "reveal", run: () => void window.api.showInFolder(path) },
+          ]
+        : [];
       if (dir) items.push({ label: t("act.zoom"), icon: "enter", keys: "Enter", run: () => zoomTo(id) });
-      items.push(
-        { kind: "sep" },
+      if (items.length > 0) items.push({ kind: "sep" });
+      if (can.fileClipboard)
+        items.push(
         { label: t("act.copy"), icon: "copy", keys: MOD + "+C", disabled: !done, run: () => copyItem(id, false) },
         { label: t("act.cut"), icon: "cut", keys: MOD + "+X", disabled: !done || id === 0, run: () => copyItem(id, true) },
         {
@@ -491,11 +509,13 @@ export function App() {
           disabled: !done,
           run: () => void pasteInto(dir ? id : disk.parent(id)),
         },
+        );
+      items.push(
         { label: t("act.copyPath"), keys: MOD + "+Shift+C", run: () => void window.api.copyText(path).then(() => flash(t("copied"))) },
         { kind: "sep" },
         { label: t("act.properties"), icon: "info", keys: "Alt+Enter", run: () => showProps(id) },
       );
-      if (id > 0) items.push({ kind: "sep" }, { label: t("act.trash"), icon: "trash", keys: "Del", danger: true, disabled: !done, run: () => setTrash([id]) });
+      if (can.trash && id > 0) items.push({ kind: "sep" }, { label: t("act.trash"), icon: "trash", keys: "Del", danger: true, disabled: !done, run: () => setTrash([id]) });
       setMenu({ x, y, items });
     },
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -668,8 +688,7 @@ export function App() {
       { label: t("menu.zoomRoot"), disabled: !nav || zoom === 0, run: () => zoomTo(0) },
       { label: t("menu.back"), icon: "back", keys: "Alt+Left", disabled: !nav || trail.back.length === 0, run: () => step("back") },
       { label: t("menu.forward"), icon: "forward", keys: "Alt+Right", disabled: !nav || trail.forward.length === 0, run: () => step("forward") },
-      { kind: "sep" },
-      { label: t("live.title"), checked: sync && !syncLost, run: toggleSync },
+      ...(can.watch ? [{ kind: "sep" } as MenuEntry, { label: t("live.title"), checked: sync && !syncLost, run: toggleSync }] : []),
       { kind: "sep" },
       { kind: "title", label: t("menu.levels") },
       ...LEVELS.map(
@@ -737,13 +756,17 @@ export function App() {
       { label: t("menu.website"), icon: "reveal", run: () => void window.api.openExternal(SITE) },
       { label: t("menu.source"), icon: "reveal", run: () => void window.api.openExternal(REPO) },
       { kind: "sep" },
-      {
-        label: t("menu.update"),
-        run: () => {
-          askedUpdate.current = true;
-          void window.api.checkUpdate();
-        },
-      },
+      ...(can.update
+        ? [
+            {
+              label: t("menu.update"),
+              run: () => {
+                askedUpdate.current = true;
+                void window.api.checkUpdate();
+              },
+            } as MenuEntry,
+          ]
+        : []),
       { label: t("menu.about"), run: () => setDialog("about") },
     ],
   };
@@ -866,7 +889,7 @@ export function App() {
           if (!window.getSelection()?.toString()) copyItem(selected, false);
         } else if (mod && key === "x" && selected > 0) copyItem(selected, true);
         else if (mod && key === "v") void pasteInto(pasteTarget());
-        else if (ready && e.key === "Delete" && selected > 0 && !(e.target as HTMLElement).closest?.(".rows")) setTrash([selected]);
+        else if (can.trash && ready && e.key === "Delete" && selected > 0 && !(e.target as HTMLElement).closest?.(".rows")) setTrash([selected]);
         else return;
         e.preventDefault();
       }
@@ -885,6 +908,22 @@ export function App() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, nav, disk, zoom, selected, phase, query, t, startScan, pickFolder, zoomTo, toStart, step]);
+
+  // Android's back button: the innermost thing first, the app itself last.
+  useEffect(() => {
+    const back = (): void => {
+      const v = view.current;
+      if (v.menu) return setMenu(null);
+      const open = document.querySelector<HTMLDialogElement>("dialog[open]");
+      if (open) return open.close();
+      if (phase.is === "scanning") return (live ? stopHere : toStart)();
+      if (v.disk && v.zoom > 0) return zoomTo(v.disk.parent(v.zoom));
+      if (phase.is !== "start") return toStart();
+      void window.api.quit();
+    };
+    window.addEventListener("diskplot:back", back);
+    return () => window.removeEventListener("diskplot:back", back);
+  }, [phase, live, stopHere, toStart, zoomTo]);
 
   // Splitter ---------------------------------------------------------------
 
@@ -930,7 +969,7 @@ export function App() {
 
   return (
     <div
-      className={"app" + (dropping ? " dropping" : "")}
+      className={"app" + (dropping ? " dropping" : "") + (can.windows ? "" : " mobile")}
       onDragOver={(e) => {
         e.preventDefault();
         setDropping(true);
@@ -942,7 +981,7 @@ export function App() {
         e.preventDefault();
         setDropping(false);
         const file = e.dataTransfer.files[0];
-        if (file) {
+        if (file && can.drop) {
           const path = window.api.pathForFile(file);
           if (path) startScan(path);
         }
@@ -1026,7 +1065,9 @@ export function App() {
         </div>
       )}
 
-      {phase.is === "start" && <StartSheet drives={drives} t={t} fmt={fmt} onScan={startScan} onPick={pickFolder} />}
+      {phase.is === "start" && (
+        <StartSheet drives={drives} access={access} t={t} fmt={fmt} onScan={startScan} onPick={pickFolder} />
+      )}
 
       {((phase.is === "scanning" && !live) || phase.is === "failed") && (
         <ScanSheet phase={phase} progress={progress} pct={scanPct} t={t} fmt={fmt} onStop={toStart} onRetry={() => startScan(phase.root)} />
@@ -1085,16 +1126,18 @@ export function App() {
               <Icon name="rescan" />
               {t("menu.rescan")}
             </button>
-            <button
-              className={"btn" + (synced ? " on" : "")}
-              aria-pressed={synced}
-              disabled={disk.t.incomplete}
-              title={t("live.title")}
-              onClick={toggleSync}
-            >
-              <span className="pulse" />
-              {t("live.button")}
-            </button>
+            {can.watch && (
+              <button
+                className={"btn" + (synced ? " on" : "")}
+                aria-pressed={synced}
+                disabled={disk.t.incomplete}
+                title={t("live.title")}
+                onClick={toggleSync}
+              >
+                <span className="pulse" />
+                {t("live.button")}
+              </button>
+            )}
             <button
               className="btn icon"
               disabled={trail.back.length === 0}
@@ -1215,7 +1258,7 @@ export function App() {
                   expanded={expanded}
                   reveal={reveal}
                   fresh={fresh}
-                  wide={panelWidth >= 560}
+                  wide={!window.api.compact && panelWidth >= 560}
                   fmt={fmt}
                   t={t}
                   onToggle={toggle}
@@ -1223,15 +1266,15 @@ export function App() {
                   onHover={setHover}
                   onZoom={zoomTo}
                   onContext={context}
-                  onTrash={askTrashOne}
+                  onTrash={can.trash ? askTrashOne : () => undefined}
                 />
               )}
               {tab === "largest" && <ListPane {...pane} ids={largest} note={t("largest.note", { count: fmt.count(largest.length) })} />}
               {tab === "types" && (
                 <TypesPane {...pane} activeExt={filter.extId} onPick={(extId) => setFilter((f) => ({ ...f, extId }))} />
               )}
-              {tab === "clutter" && <ClutterPane {...pane} onTrash={askTrash} />}
-              {tab === "dupes" && <DupesPane {...pane} state={dups} setState={setDups} onTrash={askTrash} />}
+              {tab === "clutter" && <ClutterPane {...pane} onTrash={can.trash ? askTrash : undefined} />}
+              {tab === "dupes" && <DupesPane {...pane} state={dups} setState={setDups} onTrash={can.trash ? askTrash : undefined} />}
               {tab === "changes" && (
                 <ChangesPane {...pane} comparison={comparison} snapshots={snapshots} against={against} onAgainst={setAgainst} />
               )}
@@ -1445,10 +1488,12 @@ export function App() {
             {itemStat && !itemStat.ok && <p style={{ marginTop: 12 }}>{t("props.gone")}</p>}
           </div>
           <footer>
-            <button className="btn" onClick={() => void window.api.showInFolder(disk.path(propsOf))}>
-              <Icon name="reveal" />
-              {t("act.reveal")}
-            </button>
+            {can.reveal && (
+              <button className="btn" onClick={() => void window.api.showInFolder(disk.path(propsOf))}>
+                <Icon name="reveal" />
+                {t("act.reveal")}
+              </button>
+            )}
             <button className="btn" autoFocus onClick={() => setPropsOf(null)}>
               {t("issues.close")}
             </button>
@@ -1578,8 +1623,33 @@ function Dialog({ children, onClose, wide }: { children: React.ReactNode; onClos
   );
 }
 
-function StartSheet(p: { drives: DriveInfo[] | null; t: T; fmt: Fmt; onScan: (root: string) => void; onPick: () => void }) {
+function StartSheet(p: {
+  drives: DriveInfo[] | null;
+  access: boolean;
+  t: T;
+  fmt: Fmt;
+  onScan: (root: string) => void;
+  onPick: () => void;
+}) {
   const { t, fmt } = p;
+  if (!p.access)
+    return (
+      <main className="sheet">
+        <div className="sheet-inner">
+          <h1>{t("access.title")}</h1>
+          <p className="lead">{t("access.lead")}</p>
+          <div className="sheet-foot">
+            <button className="btn primary" onClick={() => void window.api.requestAccess()}>
+              <Icon name="folder" />
+              {t("access.allow")}
+            </button>
+          </div>
+          <p className="lead" style={{ marginTop: 24, fontSize: 13.5 }}>
+            {t("access.note")}
+          </p>
+        </div>
+      </main>
+    );
   return (
     <main className="sheet">
       <div className="sheet-inner">
@@ -1606,7 +1676,7 @@ function StartSheet(p: { drives: DriveInfo[] | null; t: T; fmt: Fmt; onScan: (ro
               <div className="drive" key={d.path} onDoubleClick={() => p.onScan(d.path)}>
                 <span className="letter">
                   <Icon name="drive" size={20} />
-                  {d.path.replace(/[\\/]$/, "")}
+                  {d.label ?? d.path.replace(/[\\/]$/, "")}
                 </span>
                 <span
                   className={"meter" + (frac > 0.9 ? " full" : "")}
@@ -1636,7 +1706,7 @@ function StartSheet(p: { drives: DriveInfo[] | null; t: T; fmt: Fmt; onScan: (ro
             <Icon name="folder" />
             {t("start.folder")}
           </button>
-          <span>{t("start.drop")}</span>
+          {can.drop && <span>{t("start.drop")}</span>}
         </div>
       </div>
     </main>

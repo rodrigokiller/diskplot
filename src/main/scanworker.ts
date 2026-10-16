@@ -4,7 +4,9 @@ import { parentPort, workerData, Worker } from "worker_threads";
 import { availableParallelism } from "os";
 import { join, sep } from "path";
 import { F_DIR, F_ERR, F_LINK } from "../shared/types";
-import type { ScanIssue, ScanProgress, ScanTable, SnapshotMeta } from "../shared/types";
+import type { ScanIssue, ScanProgress, SnapshotMeta } from "../shared/types";
+import { finishTable, previewTable, tableBuffers } from "../shared/table";
+import type { RawScan, ScanFacts } from "../shared/table";
 import type { DirJob, DirResult } from "./dirworker";
 import { writeSnapshot } from "./snapshots";
 
@@ -228,102 +230,18 @@ const LIVE_DEPTH = Math.max(3, Math.min(6, job.liveDepth ?? 5));
 let lastLive = Date.now();
 let liveCost = 0;
 
+// What has been collected so far, as the shared table builders read it.
+function raw(): RawScan {
+  return { root: job.root, n, parent, size, logical, mtime, flags, nameOff, names };
+}
+function facts(): ScanFacts {
+  return { startedAt, durationMs: Date.now() - startedAt, dirs: dirCount, errors: errorCount, errorSamples: issues, incomplete: stopping };
+}
+
 function live(): void {
   const began = Date.now();
-  const count = n;
-  const sz = size.slice(0, count);
-  const lg = logical.slice(0, count);
-  const mt = mtime.slice(0, count);
-  const fc = new Uint32Array(count);
-  const depth = new Uint8Array(count);
-  for (let i = 1; i < count; i++) depth[i] = Math.min(254, depth[parent[i]] + 1);
-  for (let i = count - 1; i >= 1; i--) {
-    const p = parent[i];
-    sz[p] += sz[i];
-    lg[p] += lg[i];
-    fc[p] += flags[i] & F_DIR ? fc[i] : 1;
-    if (mt[i] > mt[p]) mt[p] = mt[i];
-  }
-
-  // Keep the shallow nodes only. A folder at the cut is sent as a solid
-  // block, so its weight still shows on the plan.
-  const remap = new Int32Array(count).fill(-1);
-  let m = 0;
-  let nameBytes = 0;
-  for (let i = 0; i < count; i++) {
-    if (depth[i] <= LIVE_DEPTH) {
-      remap[i] = m++;
-      nameBytes += nameOff[i + 1] - nameOff[i];
-    }
-  }
-  const tParent = new Int32Array(m);
-  const tSize = new Float64Array(m);
-  const tLogical = new Float64Array(m);
-  const tMtime = new Uint32Array(m);
-  const tFlags = new Uint8Array(m);
-  const tFiles = new Uint32Array(m);
-  const tNameOff = new Uint32Array(m + 1);
-  const tNames = new Uint8Array(nameBytes);
-  let off = 0;
-  for (let i = 0; i < count; i++) {
-    const j = remap[i];
-    if (j === -1) continue;
-    tParent[j] = i === 0 ? -1 : remap[parent[i]];
-    tSize[j] = sz[i];
-    tLogical[j] = lg[i];
-    tMtime[j] = mt[i];
-    tFiles[j] = fc[i];
-    tFlags[j] = depth[i] === LIVE_DEPTH ? flags[i] & ~F_DIR : flags[i];
-    tNames.set(names.subarray(nameOff[i], nameOff[i + 1]), off);
-    off += nameOff[i + 1] - nameOff[i];
-    tNameOff[j + 1] = off;
-  }
-  const childStart = new Int32Array(m + 1);
-  for (let i = 1; i < m; i++) childStart[tParent[i] + 1]++;
-  for (let i = 0; i < m; i++) childStart[i + 1] += childStart[i];
-  const fill = childStart.slice(0, m);
-  const childList = new Int32Array(Math.max(0, m - 1));
-  for (let i = 1; i < m; i++) childList[fill[tParent[i]]++] = i;
-  const bySize = (a: number, b: number): number => tSize[b] - tSize[a] || a - b;
-  for (let i = 0; i < m; i++) {
-    if (childStart[i + 1] - childStart[i] > 1) childList.subarray(childStart[i], childStart[i + 1]).sort(bySize);
-  }
-  const ext = new Uint16Array(m);
-
-  const table: ScanTable = {
-    root: job.root,
-    n: m,
-    parent: tParent,
-    size: tSize,
-    logical: tLogical,
-    mtime: tMtime,
-    flags: tFlags,
-    files: tFiles,
-    nameOff: tNameOff,
-    names: tNames,
-    childStart,
-    childList,
-    ext,
-    exts: [""],
-    startedAt,
-    durationMs: Date.now() - startedAt,
-    dirs: dirCount,
-    errors: errorCount,
-    errorSamples: [],
-  };
-  port.postMessage({ type: "partial", table }, [
-    tParent.buffer,
-    tSize.buffer,
-    tLogical.buffer,
-    tMtime.buffer,
-    tFlags.buffer,
-    tFiles.buffer,
-    tNameOff.buffer,
-    tNames.buffer,
-    childStart.buffer,
-    childList.buffer,
-    ext.buffer,
-  ] as ArrayBuffer[]);
+  const table = previewTable(raw(), LIVE_DEPTH, facts());
+  port.postMessage({ type: "partial", table }, tableBuffers(table));
   lastLive = Date.now();
   liveCost = lastLive - began;
 }
@@ -354,99 +272,7 @@ function finish(): void {
   release();
   const walkMs = Date.now() - startedAt;
 
-  const count = n;
-  const tParent = parent.slice(0, count);
-  const tSize = size.slice(0, count);
-  const tLogical = logical.slice(0, count);
-  const tMtime = mtime.slice(0, count);
-  const tFlags = flags.slice(0, count);
-  const tNameOff = nameOff.slice(0, count + 1);
-  const tNames = names.slice(0, nameEnd);
-  const files = new Uint32Array(count);
-
-  // Sum sizes, file counts and newest change upward.
-  for (let i = count - 1; i >= 1; i--) {
-    const p = tParent[i];
-    tSize[p] += tSize[i];
-    tLogical[p] += tLogical[i];
-    files[p] += tFlags[i] & F_DIR ? files[i] : 1;
-    if (tMtime[i] > tMtime[p]) tMtime[p] = tMtime[i];
-  }
-
-  // Children of each folder as one flat list, largest first.
-  const childStart = new Int32Array(count + 1);
-  for (let i = 1; i < count; i++) childStart[tParent[i] + 1]++;
-  for (let i = 0; i < count; i++) childStart[i + 1] += childStart[i];
-  const fill = childStart.slice(0, count);
-  const childList = new Int32Array(Math.max(0, count - 1));
-  for (let i = 1; i < count; i++) childList[fill[tParent[i]]++] = i;
-  const bySize = (a: number, b: number): number => tSize[b] - tSize[a] || a - b;
-  for (let i = 0; i < count; i++) {
-    const s = childStart[i];
-    const e = childStart[i + 1];
-    if (e - s > 1) childList.subarray(s, e).sort(bySize);
-  }
-
-  // Extension of each file, as an index into a small table.
-  const ext = new Uint16Array(count);
-  const exts: string[] = [""];
-  const extIds = new Map<string, number>();
-  for (let i = 1; i < count; i++) {
-    if (tFlags[i] & F_DIR) continue;
-    const s = tNameOff[i];
-    const e = tNameOff[i + 1];
-    let dot = -1;
-    for (let k = e - 1; k > s && k >= e - 12; k--) {
-      if (tNames[k] === 0x2e) {
-        dot = k;
-        break;
-      }
-    }
-    if (dot === -1 || dot === e - 1) continue;
-    let key = "";
-    let ascii = true;
-    for (let k = dot + 1; k < e; k++) {
-      let c = tNames[k];
-      if (c > 0x7f || c === 0x20) {
-        ascii = false;
-        break;
-      }
-      if (c >= 0x41 && c <= 0x5a) c += 32;
-      key += String.fromCharCode(c);
-    }
-    if (!ascii) continue;
-    let id = extIds.get(key);
-    if (id === undefined) {
-      if (exts.length >= 0xffff) continue;
-      id = exts.length;
-      exts.push(key);
-      extIds.set(key, id);
-    }
-    ext[i] = id;
-  }
-
-  const table: ScanTable = {
-    root: job.root,
-    n: count,
-    parent: tParent,
-    size: tSize,
-    logical: tLogical,
-    mtime: tMtime,
-    flags: tFlags,
-    files,
-    nameOff: tNameOff,
-    names: tNames,
-    childStart,
-    childList,
-    ext,
-    exts,
-    startedAt,
-    durationMs: Date.now() - startedAt,
-    dirs: dirCount,
-    errors: errorCount,
-    errorSamples: issues,
-    incomplete: stopping || undefined,
-  };
+  const table = finishTable(raw(), facts());
 
   if (process.env.DISKPLOT_TIMING) console.error("walk", walkMs, "finalize", Date.now() - startedAt - walkMs);
   let snapshot: SnapshotMeta | null = null;
@@ -456,19 +282,7 @@ function finish(): void {
     // A scan is still useful without its snapshot.
   }
 
-  port.postMessage({ type: "done", table, snapshot }, [
-    tParent.buffer,
-    tSize.buffer,
-    tLogical.buffer,
-    tMtime.buffer,
-    tFlags.buffer,
-    files.buffer,
-    tNameOff.buffer,
-    tNames.buffer,
-    childStart.buffer,
-    childList.buffer,
-    ext.buffer,
-  ] as ArrayBuffer[]);
+  port.postMessage({ type: "done", table, snapshot }, tableBuffers(table));
   port.close();
 }
 

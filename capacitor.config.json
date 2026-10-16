@@ -1,0 +1,8 @@
+{
+  "appId": "com.diskplot.app",
+  "appName": "Diskplot",
+  "webDir": "out/mobile",
+  "android": {
+    "backgroundColor": "#ffffff"
+  }
+}

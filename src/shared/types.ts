@@ -47,8 +47,20 @@ export interface ScanProgress {
 
 export interface DriveInfo {
   path: string;
+  label?: string; // shown instead of the path when the system names the volume
   total: number;
   free: number;
+}
+
+// What the platform underneath can do. The interface hides what it cannot.
+export interface Capabilities {
+  windows: boolean; // several windows, each with its own scan
+  trash: boolean; // send to a Recycle Bin
+  reveal: boolean; // open the file manager at an item, open an item
+  update: boolean; // check for and install new versions
+  watch: boolean; // live sync with the disk
+  fileClipboard: boolean; // copy, cut and paste files
+  drop: boolean; // drop a folder on the window
 }
 
 export interface SnapshotMeta {

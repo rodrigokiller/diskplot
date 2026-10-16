@@ -102,6 +102,10 @@ const en = {
   "keys.thisList": "This list",
 
   "start.title": "What should be measured?",
+  "access.title": "Diskplot needs access to your files",
+  "access.lead": "Android lets an app measure the shared storage only with the All files access permission. Diskplot uses it to read names and sizes.",
+  "access.allow": "Allow access",
+  "access.note": "The Android/data and Android/obb folders stay closed to every app, so they count as unreadable.",
   "start.lead": "Pick a drive, or scan one folder.",
   "start.drive": "Drive",
   "start.used": "Used",
@@ -372,6 +376,10 @@ const pt: Record<Key, string> = {
   "keys.thisList": "Esta lista",
 
   "start.title": "O que vamos medir?",
+  "access.title": "O Diskplot precisa de acesso aos seus arquivos",
+  "access.lead": "O Android só deixa um app medir o armazenamento compartilhado com a permissão Acesso a todos os arquivos. O Diskplot usa essa permissão para ler nomes e tamanhos.",
+  "access.allow": "Permitir acesso",
+  "access.note": "As pastas Android/data e Android/obb ficam fechadas para qualquer app, então contam como ilegíveis.",
   "start.lead": "Escolha uma unidade ou escaneie uma pasta.",
   "start.drive": "Unidade",
   "start.used": "Usado",
