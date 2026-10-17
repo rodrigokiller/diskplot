@@ -24,7 +24,8 @@
     "site:deploy": "git subtree push --prefix site origin gh-pages",
     "mobile:web": "vite build --config vite.mobile.config.ts",
     "mobile:sync": "npm run mobile:web && cap sync android",
-    "mobile:apk": "npm run mobile:sync && cd android && gradlew.bat assembleDebug"
+    "mobile:apk": "npm run mobile:sync && node scripts/gradle.mjs assembleDebug",
+    "mobile:release": "npm run mobile:sync && node scripts/gradle.mjs assembleRelease"
   },
   "build": {
     "appId": "com.diskplot.app",

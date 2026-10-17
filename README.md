@@ -24,7 +24,7 @@ The map uses one colour on purpose. Darker means a bigger share of what you are 
 
 - It does not read the NTFS master file table. WizTree does, and is faster for it. Diskplot walks folders, which is slower but needs no administrator rights.
 - It does not clean anything by itself. Removing is always your click, with a confirmation, and goes to the Recycle Bin.
-- macOS and Linux builds exist but are experimental and lightly tested. Windows is the supported system.
+- macOS, Linux and Android builds exist but are experimental and lightly tested. Windows is the supported system. The Android APK is on the download page, not on Google Play yet.
 - A file with several hard links is counted once per name, so folders like `WinSxS` look larger than they are.
 
 ## Speed

@@ -4,6 +4,13 @@ apply plugin: 'com.android.application'
 def pkg = new groovy.json.JsonSlurper().parse(file("../../package.json"))
 def (major, minor, patch) = pkg.version.tokenize('.').collect { it.toInteger() }
 
+// The release key never enters the repository. It lives in ~/.diskplot, or
+// wherever DISKPLOT_KEYSTORE_PROPERTIES points. Without it the release build
+// comes out unsigned.
+def keyFile = file(System.getenv("DISKPLOT_KEYSTORE_PROPERTIES") ?: "${System.getProperty('user.home')}/.diskplot/keystore.properties")
+def keyProps = new Properties()
+if (keyFile.exists()) keyFile.withInputStream { keyProps.load(it) }
+
 android {
     namespace = "com.diskplot.app"
     compileSdk = rootProject.ext.compileSdkVersion
@@ -20,8 +27,19 @@ android {
             ignoreAssetsPattern = '!.svn:!.git:!.ds_store:!*.scc:.*:!CVS:!thumbs.db:!picasa.ini:!*~'
         }
     }
+    signingConfigs {
+        release {
+            if (keyFile.exists()) {
+                storeFile file(keyProps['storeFile'])
+                storePassword keyProps['storePassword']
+                keyAlias keyProps['keyAlias']
+                keyPassword keyProps['keyPassword']
+            }
+        }
+    }
     buildTypes {
         release {
+            if (keyFile.exists()) signingConfig signingConfigs.release
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
         }

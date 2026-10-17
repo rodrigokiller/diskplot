@@ -23,8 +23,8 @@
     <link rel="preload" href="fonts/barlow-semi-condensed-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin />
     <link rel="stylesheet" href="style.css" />
     <script src="theme.js"></script>
-    <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Diskplot","description":"Disk space analyzer for Windows that shows a treemap and a sortable tree side by side.","applicationCategory":"UtilitiesApplication","operatingSystem":"Windows 10, Windows 11","url":"https://www.diskplot.com/","downloadUrl":"https://www.diskplot.com/download/","license":"https://opensource.org/license/mit","isAccessibleForFree":true,"inLanguage":"en","author":{"@type":"Person","name":"Rodrigo Sanguanini","url":"https://sanguanini.dev"},"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}</script>
-    <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Is it free?","acceptedAnswer":{"@type":"Answer","text":"Yes. Diskplot is released under the MIT license and can be used at home and at work at no cost."}},{"@type":"Question","name":"Does it need administrator rights?","acceptedAnswer":{"@type":"Answer","text":"No. It scans everything the current account can read. Folders it cannot open are counted and listed. Run it as administrator to include them."}},{"@type":"Question","name":"Why do sizes differ from File Explorer?","acceptedAnswer":{"@type":"Answer","text":"Diskplot reports the space allocated on disk. Compressed files, sparse files and online-only OneDrive files occupy less than their length. A file with several hard links is counted once per name."}},{"@type":"Question","name":"Does it send data anywhere?","acceptedAnswer":{"@type":"Answer","text":"No. The only network request is to GitHub, to check for a newer version."}},{"@type":"Question","name":"Is there a version for macOS or Linux?","acceptedAnswer":{"@type":"Answer","text":"Yes, as experimental builds on the download page: an AppImage for Linux and a .dmg for macOS on Apple Silicon. They are lightly tested and the scan is slower there. Windows 10 and 11 are the supported systems."}}]}</script>
+    <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Diskplot","description":"Disk space analyzer for Windows that shows a treemap and a sortable tree side by side.","applicationCategory":"UtilitiesApplication","operatingSystem":"Windows 10, Windows 11, Android 7+","url":"https://www.diskplot.com/","downloadUrl":"https://www.diskplot.com/download/","license":"https://opensource.org/license/mit","isAccessibleForFree":true,"inLanguage":"en","author":{"@type":"Person","name":"Rodrigo Sanguanini","url":"https://sanguanini.dev"},"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}</script>
+    <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Is it free?","acceptedAnswer":{"@type":"Answer","text":"Yes. Diskplot is released under the MIT license and can be used at home and at work at no cost."}},{"@type":"Question","name":"Does it need administrator rights?","acceptedAnswer":{"@type":"Answer","text":"No. It scans everything the current account can read. Folders it cannot open are counted and listed. Run it as administrator to include them."}},{"@type":"Question","name":"Why do sizes differ from File Explorer?","acceptedAnswer":{"@type":"Answer","text":"Diskplot reports the space allocated on disk. Compressed files, sparse files and online-only OneDrive files occupy less than their length. A file with several hard links is counted once per name."}},{"@type":"Question","name":"Does it send data anywhere?","acceptedAnswer":{"@type":"Answer","text":"No. The only network request is to GitHub, to check for a newer version."}},{"@type":"Question","name":"Is there a version for macOS or Linux?","acceptedAnswer":{"@type":"Answer","text":"Yes, as experimental builds on the download page: an AppImage for Linux and a .dmg for macOS on Apple Silicon. They are lightly tested and the scan is slower there. Windows 10 and 11 are the supported systems."}},{"@type":"Question","name":"Is there a version for Android?","acceptedAnswer":{"@type":"Answer","text":"Yes, as an experimental APK on the download page, for Android 7 or newer. It measures the shared storage (photos, downloads, documents) and asks for the All files access permission to do it. It is not on Google Play yet."}}]}</script>
   </head>
   <body>
     <header class="top">
@@ -72,7 +72,7 @@
                 </a>
                 <a class="btn line" href="https://github.com/rodrigokiller/diskplot">Source on GitHub</a>
               </div>
-              <p class="fine">Free and open source, MIT license. Windows 10 and 11; Linux and macOS builds are experimental. No account, no telemetry.</p>
+              <p class="fine">Free and open source, MIT license. Windows 10 and 11; Linux, macOS and Android builds are experimental. No account, no telemetry.</p>
             </div>
           </div>
 
@@ -246,6 +246,10 @@
             <summary>Is there a version for macOS or Linux?</summary>
             <p>Yes, as experimental builds on the download page: an AppImage for Linux and a .dmg for macOS on Apple Silicon. They are lightly tested and the scan is slower there. Windows 10 and 11 are the supported systems.</p>
           </details>
+          <details>
+            <summary>Is there a version for Android?</summary>
+            <p>Yes, as an experimental APK on the download page, for Android 7 or newer. It measures the shared storage (photos, downloads, documents) and asks for the All files access permission to do it. It is not on Google Play yet.</p>
+          </details>
         </div>
       </section>
     </main>
@@ -254,7 +258,7 @@
       <div class="wrap">
         <div>
           <h2>Download Diskplot</h2>
-          <p>Installer and portable build for Windows 10 and 11. Experimental builds for Linux and macOS.</p>
+          <p>Installer and portable build for Windows 10 and 11. Experimental builds for Linux, macOS and Android.</p>
         </div>
         <div class="cta">
           <a class="btn" href="download/">Download for Windows</a>

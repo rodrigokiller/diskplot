@@ -18,6 +18,8 @@
         appimage: "Linux, AppImage",
         deb: "Linux, pacote .deb",
         dmg: "macOS",
+        apk: "Android",
+        apkMeta: "Experimental. Instale pelo arquivo; ainda não está no Google Play. Android 7 ou mais novo.",
         experimental: "Experimental, pouco testado.",
         download: "Baixar",
         earlier: "Versões anteriores",
@@ -37,6 +39,8 @@
         appimage: "Linux, AppImage",
         deb: "Linux, .deb package",
         dmg: "macOS",
+        apk: "Android",
+        apkMeta: "Experimental. Install it from the file; it is not on Google Play yet. Android 7 or newer.",
         experimental: "Experimental, lightly tested.",
         download: "Download",
         earlier: "Earlier versions",
@@ -70,6 +74,7 @@
     { key: "appimage", test: /\.AppImage$/i, experimental: true },
     { key: "deb", test: /\.deb$/i, experimental: true },
     { key: "dmg", test: /\.dmg$/i, experimental: true },
+    { key: "apk", test: /\.apk$/i, experimental: true },
   ];
   function classify(assets) {
     var out = [];
