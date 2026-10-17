@@ -3,7 +3,8 @@ import type { KeyboardEvent as ReactKeyboardEvent, ReactNode } from "react";
 import { Icon } from "./Icon";
 import type { IconName } from "./Icon";
 
-export const ROW = 26;
+// Rows are sized for a mouse on the desktop and for a finger on Android.
+export const ROW = window.api.can.windows ? 26 : 44;
 
 // Fixed height rows, only the visible ones mounted.
 export function VirtualRows(props: {
@@ -13,7 +14,9 @@ export function VirtualRows(props: {
   onKeyDown?: (e: ReactKeyboardEvent<HTMLDivElement>) => void;
   onLeave?: () => void;
   label: string;
+  rowHeight?: number;
 }) {
+  const R = props.rowHeight ?? ROW;
   const ref = useRef<HTMLDivElement>(null);
   const [top, setTop] = useState(0);
   const [height, setHeight] = useState(400);
@@ -31,17 +34,17 @@ export function VirtualRows(props: {
     const el = ref.current;
     const index = props.reveal?.index ?? -1;
     if (!el || index < 0) return;
-    const y = index * ROW;
-    if (y < el.scrollTop) el.scrollTop = Math.max(0, y - ROW * 2);
-    else if (y + ROW > el.scrollTop + el.clientHeight) el.scrollTop = y - el.clientHeight + ROW * 3;
+    const y = index * R;
+    if (y < el.scrollTop) el.scrollTop = Math.max(0, y - R * 2);
+    else if (y + R > el.scrollTop + el.clientHeight) el.scrollTop = y - el.clientHeight + R * 3;
     // Only when asked to reveal, not on every index change.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tick]);
 
-  const first = Math.max(0, Math.floor(top / ROW) - 6);
-  const last = Math.min(props.count, Math.ceil((top + height) / ROW) + 6);
+  const first = Math.max(0, Math.floor(top / R) - 6);
+  const last = Math.min(props.count, Math.ceil((top + height) / R) + 6);
   const rows: ReactNode[] = [];
-  for (let i = first; i < last; i++) rows.push(props.render(i, i * ROW));
+  for (let i = first; i < last; i++) rows.push(props.render(i, i * R));
 
   return (
     <div
@@ -55,7 +58,7 @@ export function VirtualRows(props: {
       onKeyDown={props.onKeyDown}
       onMouseLeave={props.onLeave}
     >
-      <div style={{ height: props.count * ROW }} />
+      <div style={{ height: props.count * R }} />
       {rows}
     </div>
   );

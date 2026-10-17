@@ -9,7 +9,8 @@ import type { Comparison, Filter } from "./lib/analysis";
 import { initialLang, makeFmt, makeT } from "./lib/i18n";
 import type { Fmt, Lang, T } from "./lib/i18n";
 import { Icon, Mark, Wordmark } from "./components/Icon";
-import { Menu } from "./components/ui";
+import { Menu, ROW } from "./components/ui";
+import { AppBar, BarButton, BrandTitle, FolderList, ItemSheet, SearchBar, SettingsSheet, Tabs, files } from "./components/Mobile";
 import type { MenuEntry } from "./components/ui";
 import { Treemap } from "./components/Treemap";
 import { TreeView } from "./components/TreeView";
@@ -24,10 +25,14 @@ const LEVELS = [2, 3, 4, 5, 6, 0] as const; // 0 means every level
 const BAR_ALL = ["file", "view", "window", "help"] as const;
 const can = window.api.can;
 const BAR = BAR_ALL.filter((n) => n !== "window" || can.windows);
+// Android: an app bar, tabs and bottom sheets in place of the desktop window chrome.
+const MOBILE = !can.windows;
 type BarName = (typeof BAR_ALL)[number];
 // Shown in menus and in the shortcut list. The Mac spells the modifier its own way.
 const MOD = navigator.platform.toLowerCase().includes("mac") ? "Cmd" : "Ctrl";
-type Tab = "tree" | "largest" | "types" | "clutter" | "dupes" | "changes" | "found";
+type Tab = "plan" | "folders" | "tree" | "largest" | "types" | "clutter" | "dupes" | "changes" | "found";
+// Where a new scan opens: the plan on a phone, the tree beside it on the desktop.
+const HOME: Tab = MOBILE ? "plan" : "tree";
 type Phase = { is: "start" } | { is: "scanning"; root: string } | { is: "failed"; root: string; error: string } | { is: "ready" };
 
 const MB = 1024 * 1024;
@@ -74,7 +79,9 @@ export function App() {
   const [hover, setHover] = useState(-1);
   const [expanded, setExpanded] = useState<Set<number>>(() => new Set([0]));
   const [reveal, setReveal] = useState(0);
-  const [tab, setTab] = useState<Tab>("tree");
+  const [tab, setTab] = useState<Tab>(HOME);
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const [searching, setSearching] = useState(false);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>(NO_FILTER);
   const [snapshots, setSnapshots] = useState<SnapshotMeta[]>([]);
@@ -189,11 +196,11 @@ export function App() {
     setDockOpen(true);
     setFresh(new Set());
     setDisk(null);
-    setTab("tree");
+    setTab(HOME);
     setPhase({ is: "scanning", root });
     const norm = (p: string): string => p.replace(/[\\/]+$/, "").toLowerCase();
     const drive = drives?.find((d) => norm(d.path) === norm(root));
-    if (drive) setScanBase(drive.total - drive.free);
+    if (drive && can.driveTotals) setScanBase(drive.total - drive.free);
     else {
       setScanBase(null);
       void window.api.listSnapshots(root).then((all) => all.length > 0 && setScanBase(all[0].total));
@@ -334,11 +341,15 @@ export function App() {
   );
   useEffect(() => {
     if (filtering) setTab("found");
-    else setTab((cur) => (cur === "found" ? "tree" : cur));
+    else setTab((cur) => (cur === "found" ? HOME : cur));
   }, [filtering]);
   const clearFilters = (): void => {
     setQuery("");
     setFilter(NO_FILTER);
+  };
+  const closeSearch = (): void => {
+    setSearching(false);
+    clearFilters();
   };
 
   const largest = useMemo(
@@ -487,6 +498,7 @@ export function App() {
   const context = useCallback(
     (id: number, x: number, y: number) => {
       if (!disk) return;
+      if (MOBILE) return setSelected(id);
       const path = disk.path(id);
       const dir = disk.isDir(id);
       const done = phase.is === "ready";
@@ -913,6 +925,9 @@ export function App() {
   useEffect(() => {
     const back = (): void => {
       const v = view.current;
+      if (settingsOpen) return setSettingsOpen(false);
+      if (searching) return closeSearch();
+      if (v.disk && v.selected >= 0 && v.selected !== v.zoom) return setSelected(-1);
       if (v.menu) return setMenu(null);
       const open = document.querySelector<HTMLDialogElement>("dialog[open]");
       if (open) return open.close();
@@ -923,7 +938,8 @@ export function App() {
     };
     window.addEventListener("diskplot:back", back);
     return () => window.removeEventListener("diskplot:back", back);
-  }, [phase, live, stopHere, toStart, zoomTo]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [phase, live, stopHere, toStart, zoomTo, settingsOpen, searching]);
 
   // Splitter ---------------------------------------------------------------
 
@@ -967,9 +983,135 @@ export function App() {
   const tabs: Tab[] = ["tree", "largest", "types", "clutter", "dupes", "changes"];
   if (filtering) tabs.push("found");
 
+  // Pieces both layouts place: the plan, and the panes that are not the tree.
+  const plan = disk && (
+    <Treemap
+      disk={disk}
+      version={version}
+      theme={theme}
+      zoom={zoom}
+      fresh={fresh}
+      levels={levels === 0 ? Infinity : levels}
+      selected={selected}
+      hover={hover}
+      comparison={comparison}
+      showDelta={tab === "changes"}
+      fmt={fmt}
+      t={t}
+      onHover={setHover}
+      onSelect={select}
+      onZoom={zoomTo}
+      onContext={context}
+      onArea={setPlanArea}
+    />
+  );
+  const panes = disk && (
+    <>
+      {tab === "largest" && <ListPane {...pane} ids={largest} note={t("largest.note", { count: fmt.count(largest.length) })} />}
+      {tab === "types" && (
+        <TypesPane {...pane} activeExt={filter.extId} onPick={(extId) => setFilter((f) => ({ ...f, extId }))} />
+      )}
+      {tab === "clutter" && <ClutterPane {...pane} onTrash={can.trash ? askTrash : undefined} />}
+      {tab === "dupes" && <DupesPane {...pane} state={dups} setState={setDups} onTrash={can.trash ? askTrash : undefined} />}
+      {tab === "changes" && (
+        <ChangesPane {...pane} comparison={comparison} snapshots={snapshots} against={against} onAgainst={setAgainst} />
+      )}
+      {tab === "found" && found && (
+        <ListPane
+          {...pane}
+          ids={found.ids}
+          empty={t("found.none")}
+          note={
+            <>
+              <strong>{t("found.summary", { count: fmt.count(found.total), bytes: fmt.bytes(found.bytes) })}</strong>
+              {filter.extId >= 0 && " " + t("found.type", { ext: disk.t.exts[filter.extId] || "?" }) + "."}
+              {found.total > found.ids.length && " " + t("found.capped", { shown: fmt.count(found.ids.length) })}
+            </>
+          }
+        />
+      )}
+    </>
+  );
+
+  // The phone layout -------------------------------------------------------
+  const norm = (p: string): string => p.replace(/[\\/]+$/, "").toLowerCase();
+  const driveLabel = disk ? drives?.find((d) => norm(d.path) === norm(disk.t.root))?.label : undefined;
+  const more = <BarButton icon="more" label={t("m.more")} onClick={() => setSettingsOpen(true)} />;
+  const mobileHeader = !MOBILE ? null : searching && disk && nav ? (
+    <SearchBar
+      t={t}
+      value={query}
+      onChange={setQuery}
+      onClose={closeSearch}
+      filters={
+        <>
+          <select
+            className={"select" + (filter.minBytes > 0 ? " on" : "")}
+            aria-label={t("filter.size")}
+            value={filter.minBytes}
+            onChange={(e) => setFilter((f) => ({ ...f, minBytes: Number(e.target.value) }))}
+          >
+            <option value={0}>{t("filter.size")}</option>
+            {[1, 10, 100, 1024].map((mb) => (
+              <option key={mb} value={mb * MB}>
+                {t("filter.size")} {fmt.bytes(mb * MB)}
+              </option>
+            ))}
+          </select>
+          <select
+            className={"select" + (filter.olderThanDays > 0 ? " on" : "")}
+            aria-label={t("filter.age")}
+            value={filter.olderThanDays}
+            onChange={(e) => setFilter((f) => ({ ...f, olderThanDays: Number(e.target.value) }))}
+          >
+            <option value={0}>{t("filter.age")}</option>
+            {([30, 180, 365, 730] as const).map((d) => (
+              <option key={d} value={d}>
+                {t("filter.age")} {t(`filter.days${d}`)}
+              </option>
+            ))}
+          </select>
+        </>
+      }
+    />
+  ) : (
+    <AppBar
+      t={t}
+      back={disk && nav && zoom > 0 ? () => zoomTo(disk.parent(zoom)) : undefined}
+      title={
+        disk && nav ? (zoom === 0 ? (driveLabel ?? disk.t.root) : disk.name(zoom)) : phase.is === "scanning" ? t("scan.dockTitle") : <BrandTitle />
+      }
+      subtitle={
+        disk && nav
+          ? live
+            ? t("scan.dockTitle") + (scanPct !== null ? " " + Math.round(scanPct * 100) + "%" : "") + " · " + files(progress?.files ?? 0, fmt, t)
+            : fmt.bytes(disk.size(zoom)) + " · " + files(disk.files(zoom), fmt, t) + (disk.t.incomplete ? " · " + t("scan.stoppedShort") : "")
+          : phase.is === "scanning" || phase.is === "failed"
+            ? phase.root
+            : undefined
+      }
+      progress={phase.is === "scanning" ? (scanPct ?? null) : undefined}
+      actions={
+        live ? (
+          <BarButton icon="stop" label={t(stopping ? "scan.stopping" : "scan.cancel")} onClick={stopHere} />
+        ) : ready ? (
+          <>
+            <BarButton icon="search" label={t("m.search")} onClick={() => setSearching(true)} />
+            {more}
+          </>
+        ) : (
+          more
+        )
+      }
+    />
+  );
+  const mobileTabs: Tab[] = ["plan", "folders", "largest", "types", "clutter", "dupes", "changes"];
+  if (filtering) mobileTabs.push("found");
+
   return (
     <div
       className={"app" + (dropping ? " dropping" : "") + (can.windows ? "" : " mobile")}
+      style={{ ["--row" as string]: ROW + "px" }}
       onDragOver={(e) => {
         e.preventDefault();
         setDropping(true);
@@ -987,62 +1129,65 @@ export function App() {
         }
       }}
     >
-      <header className="titlebar">
-        <div className="brand">
-          <Mark />
-          <Wordmark />
-        </div>
-        <nav className={"menus" + (barFocus >= 0 || menu?.from ? " keys" : "")}>
-          {BAR.map((name, i) => {
-            const label = t(`menu.${name}`);
-            const at = label.toLowerCase().indexOf(t(`menu.${name}.key`));
-            return (
-              <button
-                key={name}
-                data-menu={name}
-                data-menu-owner=""
-                tabIndex={-1}
-                className={"menu-button" + (barFocus === i ? " focus" : "")}
-                aria-haspopup="menu"
-                aria-expanded={menu?.from === name}
-                onMouseDown={(e) => {
-                  // The button keeps neither focus nor the click: it only toggles.
-                  e.preventDefault();
-                  if (menu?.from === name) setMenu(null);
-                  else openMenu(name);
-                }}
-                onMouseEnter={() => {
-                  if (menu?.from && menu.from !== name) openMenu(name);
-                }}
-              >
-                {at < 0 ? (
-                  label
-                ) : (
-                  <>
-                    {label.slice(0, at)}
-                    <u>{label[at]}</u>
-                    {label.slice(at + 1)}
-                  </>
-                )}
-              </button>
-            );
-          })}
-        </nav>
-        <div className="titlebar-path">{nav && disk ? disk.path(zoom) : phase.is === "scanning" ? phase.root : ""}</div>
-        <button
-          className="menu-button titlebar-tool"
-          tabIndex={-1}
-          title={t("menu.toggleMode")}
-          aria-label={t("menu.toggleMode")}
-          onClick={() => {
-            const next = dark ? "light" : "dark";
-            setMode(next);
-            save("mode", next);
-          }}
-        >
-          <Icon name="sun" />
-        </button>
-      </header>
+      {mobileHeader}
+      {!MOBILE && (
+        <header className="titlebar">
+          <div className="brand">
+            <Mark />
+            <Wordmark />
+          </div>
+          <nav className={"menus" + (barFocus >= 0 || menu?.from ? " keys" : "")}>
+            {BAR.map((name, i) => {
+              const label = t(`menu.${name}`);
+              const at = label.toLowerCase().indexOf(t(`menu.${name}.key`));
+              return (
+                <button
+                  key={name}
+                  data-menu={name}
+                  data-menu-owner=""
+                  tabIndex={-1}
+                  className={"menu-button" + (barFocus === i ? " focus" : "")}
+                  aria-haspopup="menu"
+                  aria-expanded={menu?.from === name}
+                  onMouseDown={(e) => {
+                    // The button keeps neither focus nor the click: it only toggles.
+                    e.preventDefault();
+                    if (menu?.from === name) setMenu(null);
+                    else openMenu(name);
+                  }}
+                  onMouseEnter={() => {
+                    if (menu?.from && menu.from !== name) openMenu(name);
+                  }}
+                >
+                  {at < 0 ? (
+                    label
+                  ) : (
+                    <>
+                      {label.slice(0, at)}
+                      <u>{label[at]}</u>
+                      {label.slice(at + 1)}
+                    </>
+                  )}
+                </button>
+              );
+            })}
+          </nav>
+          <div className="titlebar-path">{nav && disk ? disk.path(zoom) : phase.is === "scanning" ? phase.root : ""}</div>
+          <button
+            className="menu-button titlebar-tool"
+            tabIndex={-1}
+            title={t("menu.toggleMode")}
+            aria-label={t("menu.toggleMode")}
+            onClick={() => {
+              const next = dark ? "light" : "dark";
+              setMode(next);
+              save("mode", next);
+            }}
+          >
+            <Icon name="sun" />
+          </button>
+        </header>
+      )}
 
       {notice && (
         <div className={"notice" + (notice.bad ? " bad" : "")} role="status">
@@ -1073,7 +1218,30 @@ export function App() {
         <ScanSheet phase={phase} progress={progress} pct={scanPct} t={t} fmt={fmt} onStop={toStart} onRetry={() => startScan(phase.root)} />
       )}
 
-      {(ready || live) && disk && (
+      {MOBILE && (ready || live) && disk && (
+        <>
+          <Tabs tabs={mobileTabs} tab={tab} onTab={setTab} label={(k) => t(`tab.${k}`)} marked={grew ? "changes" : null} />
+          <main className="m-body">
+            {tab === "plan" && plan}
+            {tab === "folders" && (
+              <FolderList
+                disk={disk}
+                version={version}
+                zoom={zoom}
+                selected={selected}
+                fresh={fresh}
+                fmt={fmt}
+                t={t}
+                onOpen={zoomTo}
+                onSelect={setSelected}
+              />
+            )}
+            {panes}
+          </main>
+        </>
+      )}
+
+      {!MOBILE && (ready || live) && disk && (
         <>
           {live && (
             <div className="toolrow livebar" role="status">
@@ -1220,25 +1388,7 @@ export function App() {
           </div>
 
           <div className="work">
-            <Treemap
-              disk={disk}
-              version={version}
-              theme={theme}
-              zoom={zoom}
-              fresh={fresh}
-              levels={levels === 0 ? Infinity : levels}
-              selected={selected}
-              hover={hover}
-              comparison={comparison}
-              showDelta={tab === "changes"}
-              fmt={fmt}
-              t={t}
-              onHover={setHover}
-              onSelect={select}
-              onZoom={zoomTo}
-              onContext={context}
-              onArea={setPlanArea}
-            />
+            {plan}
             <div className="splitter" onMouseDown={dragSplit} role="separator" aria-orientation="vertical" />
             <aside className="schedule" style={{ width: panelWidth }}>
               <div className="tabs" role="tablist">
@@ -1269,29 +1419,7 @@ export function App() {
                   onTrash={can.trash ? askTrashOne : () => undefined}
                 />
               )}
-              {tab === "largest" && <ListPane {...pane} ids={largest} note={t("largest.note", { count: fmt.count(largest.length) })} />}
-              {tab === "types" && (
-                <TypesPane {...pane} activeExt={filter.extId} onPick={(extId) => setFilter((f) => ({ ...f, extId }))} />
-              )}
-              {tab === "clutter" && <ClutterPane {...pane} onTrash={can.trash ? askTrash : undefined} />}
-              {tab === "dupes" && <DupesPane {...pane} state={dups} setState={setDups} onTrash={can.trash ? askTrash : undefined} />}
-              {tab === "changes" && (
-                <ChangesPane {...pane} comparison={comparison} snapshots={snapshots} against={against} onAgainst={setAgainst} />
-              )}
-              {tab === "found" && found && (
-                <ListPane
-                  {...pane}
-                  ids={found.ids}
-                  empty={t("found.none")}
-                  note={
-                    <>
-                      <strong>{t("found.summary", { count: fmt.count(found.total), bytes: fmt.bytes(found.bytes) })}</strong>
-                      {filter.extId >= 0 && " " + t("found.type", { ext: disk.t.exts[filter.extId] || "?" }) + "."}
-                      {found.total > found.ids.length && " " + t("found.capped", { shown: fmt.count(found.ids.length) })}
-                    </>
-                  }
-                />
-              )}
+              {panes}
               {live && dockOpen && <ScanDock progress={progress} pct={scanPct} t={t} fmt={fmt} onClose={() => setDockOpen(false)} />}
             </aside>
           </div>
@@ -1357,6 +1485,60 @@ export function App() {
             )}
           </footer>
         </>
+      )}
+
+      {MOBILE && disk && nav && selected >= 0 && selected !== zoom && !disk.isGone(selected) && (
+        <ItemSheet
+          disk={disk}
+          id={selected}
+          fmt={fmt}
+          t={t}
+          onClose={() => setSelected(-1)}
+          onOpen={(id) => {
+            setSelected(-1);
+            zoomTo(id);
+          }}
+          onCopy={(path) => void window.api.copyText(path).then(() => flash(t("copied")))}
+        />
+      )}
+      {MOBILE && settingsOpen && (
+        <SettingsSheet
+          t={t}
+          version={appVersion}
+          family={family}
+          families={FAMILIES.map((v) => ({ value: v, label: t(v === "grid" ? "menu.themeGrid" : "menu.themePaper") }))}
+          onFamily={(v) => {
+            setFamily(v);
+            save("family", v);
+          }}
+          mode={mode}
+          modes={MODES.map((v) => ({ value: v, label: t(v === "system" ? "menu.modeSystemAndroid" : v === "light" ? "menu.modeLight" : "menu.modeDark") }))}
+          onMode={(v) => {
+            setMode(v);
+            save("mode", v);
+          }}
+          levels={levels}
+          levelChoices={LEVELS.map((v) => ({ value: v as number, label: v === 0 ? t("menu.levelsAll") : String(v) }))}
+          onLevels={(v) => {
+            setLevels(v);
+            save("levels", String(v));
+          }}
+          lang={lang}
+          langs={[
+            { value: "en" as Lang, label: "English" },
+            { value: "pt" as Lang, label: "Português" },
+          ]}
+          onLang={(v) => {
+            setLang(v);
+            save("lang", v);
+          }}
+          onRescan={ready && disk ? () => startScan(disk.t.root) : undefined}
+          onDrives={phase.is !== "start" ? toStart : undefined}
+          onSite={() => void window.api.openExternal(SITE)}
+          onSource={() => void window.api.openExternal(REPO)}
+          onAuthor={() => void window.api.openExternal(AUTHOR_SITE)}
+          onClose={() => setSettingsOpen(false)}
+        />
       )}
 
       {menu && (

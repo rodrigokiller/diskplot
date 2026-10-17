@@ -448,3 +448,16 @@ The app has two themes, Grid and Paper, and each has a light and a dark mode. Th
 Grid, light: paper `oklch(1 0 0)`, ink `oklch(0.18 0.005 268)`, ramp from `oklch(0.935 0.032 270)` to `oklch(0.4 0.21 265)`. In the Grid themes the construction grid (24px, in the `line` colour) shows behind the start sheet in the app and behind the hero on the site. The site adds one colour plane, `oklch(0.45 0.21 265)`, used for the closing band and for button hover.
 
 The mark is a small treemap: five blocks, each half the one before it, in the ramp from strong to weak.
+
+## Android layout
+
+On Android the same views are arranged the way Android apps are, with the brand carried by the theme (square corners, one ink), not by desktop chrome. Code: `src/renderer/src/components/Mobile.tsx` and `src/mobile/mobile.css`.
+
+- **Top app bar**, 64px: the mark or a back arrow, the folder in view as the title, its size and file count below, then search and a more-options button. While a scan runs the action is Stop and a 3px progress line runs along the foot of the bar.
+- **Tabs**, 48px, scrolling sideways: Map, Folders, Largest, Types, Clutter, Duplicates, Changes, and Found while searching. One view fills the screen at a time. The active tab is underlined with a 3px bar in the ink.
+- **Folders** is a drill-down list of the folder in view, 64px rows: name and size, the share and file count below, and the share of the folder drawn as a 3px bar along the foot of the row. A tap opens a folder; a long press selects it. Map and Folders always show the same folder.
+- **Bottom sheets** rise from the bottom with a drag grip and close when dragged down or with Back. The item sheet (non-modal) holds what the desktop context menu held; the settings sheet (modal, over a 40% ink scrim) holds what the desktop menus held, with choices as square chips.
+- **Type steps added for touch**: 20px titles in the app bar and sheets, 18px item titles, 16px list text, 15px controls and tabs, 13.5px secondary lines.
+- **Touch**: every target is at least 44px; rows in the shared panes are 44px. Scrollbars are 3px and carry no gutter.
+- **Back** closes, in order: the settings sheet, the search, the item sheet, then goes up one folder, then back to the drive list, then leaves the app.
+

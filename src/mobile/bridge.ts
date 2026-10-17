@@ -211,7 +211,7 @@ let version = "";
 void Native.info().then((i) => (version = i.version)).catch(() => undefined);
 
 const api: Api = {
-  can: { windows: false, trash: false, reveal: false, update: false, watch: false, fileClipboard: false, drop: false },
+  can: { windows: false, trash: false, reveal: false, update: false, watch: false, fileClipboard: false, drop: false, driveTotals: false },
   compact: window.matchMedia("(max-width: 820px)").matches,
   access: () => Native.access().then((r) => r.granted),
   requestAccess: () => Native.requestAccess(),

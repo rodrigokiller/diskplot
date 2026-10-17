@@ -31,6 +31,7 @@ const paths: Record<string, ReactNode> = {
   cut: <path d="M2.75 2.75h4v4h-4zM9.25 9.25h4v4h-4zM6.75 6.75l2.5 2.5M13.25 2.75 9.5 6.5M2.75 13.25 6.5 9.5" />,
   paste: <path d="M5.75 2.75h4.5v2.5h-4.5zM10.25 3.75h3v9.5H2.75V3.75h3M5.5 8.25h5M5.5 10.75h5" />,
   info: <path d="M2.75 2.75h10.5v10.5H2.75zM8 7.25v4M8 4.5v1" />,
+  more: <path d="M7 2h2v2H7zM7 7h2v2H7zM7 12h2v2H7z" fill="currentColor" stroke="none" />,
   windows: <path d="M2.75 2.75h6.5v6.5h-6.5zM6.75 9.25v4h6.5v-6.5h-4" />,
   enter: <path d="M2.75 2.75h10.5v10.5H2.75zM8 5.25v5.5M5.25 8h5.5" />,
   up: <path d="M8 13V3.5M4 7.25 8 3.25l4 4" />,

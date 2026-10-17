@@ -28,7 +28,7 @@ function on<A extends unknown[]>(channel: string, cb: (...args: A) => void): () 
 }
 
 const api = {
-  can: { windows: true, trash: true, reveal: true, update: true, watch: true, fileClipboard: true, drop: true } as Capabilities,
+  can: { windows: true, trash: true, reveal: true, update: true, watch: true, fileClipboard: true, drop: true, driveTotals: true } as Capabilities,
   compact: false, // a phone-sized screen
   // Desktop systems let any program read the disk; there is nothing to ask for.
   access: async (): Promise<boolean> => true,

@@ -61,6 +61,7 @@ export interface Capabilities {
   watch: boolean; // live sync with the disk
   fileClipboard: boolean; // copy, cut and paste files
   drop: boolean; // drop a folder on the window
+  driveTotals: boolean; // a scan of a whole drive covers the space the drive reports as used
 }
 
 export interface SnapshotMeta {
