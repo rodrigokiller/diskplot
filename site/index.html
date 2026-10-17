@@ -24,7 +24,7 @@
     <link rel="stylesheet" href="style.css" />
     <script src="theme.js"></script>
     <script type="application/ld+json">{"@context":"https://schema.org","@type":"SoftwareApplication","name":"Diskplot","description":"Disk space analyzer for Windows that shows a treemap and a sortable tree side by side.","applicationCategory":"UtilitiesApplication","operatingSystem":"Windows 10, Windows 11, Android 7+","url":"https://www.diskplot.com/","downloadUrl":"https://www.diskplot.com/download/","license":"https://opensource.org/license/mit","isAccessibleForFree":true,"inLanguage":"en","author":{"@type":"Person","name":"Rodrigo Sanguanini","url":"https://sanguanini.dev"},"offers":{"@type":"Offer","price":"0","priceCurrency":"USD"}}</script>
-    <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Is it free?","acceptedAnswer":{"@type":"Answer","text":"Yes. Diskplot is released under the MIT license and can be used at home and at work at no cost."}},{"@type":"Question","name":"Does it need administrator rights?","acceptedAnswer":{"@type":"Answer","text":"No. It scans everything the current account can read. Folders it cannot open are counted and listed. Run it as administrator to include them."}},{"@type":"Question","name":"Why do sizes differ from File Explorer?","acceptedAnswer":{"@type":"Answer","text":"Diskplot reports the space allocated on disk. Compressed files, sparse files and online-only OneDrive files occupy less than their length. A file with several hard links is counted once per name."}},{"@type":"Question","name":"Does it send data anywhere?","acceptedAnswer":{"@type":"Answer","text":"No. The only network request is to GitHub, to check for a newer version."}},{"@type":"Question","name":"Is there a version for macOS or Linux?","acceptedAnswer":{"@type":"Answer","text":"Yes, as experimental builds on the download page: an AppImage for Linux and a .dmg for macOS on Apple Silicon. They are lightly tested and the scan is slower there. Windows 10 and 11 are the supported systems."}},{"@type":"Question","name":"Is there a version for Android?","acceptedAnswer":{"@type":"Answer","text":"Yes, as an experimental APK on the download page, for Android 7 or newer. It measures the shared storage (photos, downloads, documents) and asks for the All files access permission to do it. It is not on Google Play yet."}}]}</script>
+    <script type="application/ld+json">{"@context":"https://schema.org","@type":"FAQPage","mainEntity":[{"@type":"Question","name":"Is it free?","acceptedAnswer":{"@type":"Answer","text":"Yes. Diskplot is released under the MIT license and can be used at home and at work at no cost."}},{"@type":"Question","name":"Does it need administrator rights?","acceptedAnswer":{"@type":"Answer","text":"No. It scans everything the current account can read. Folders it cannot open are counted and listed. Run it as administrator to include them."}},{"@type":"Question","name":"Why do sizes differ from File Explorer?","acceptedAnswer":{"@type":"Answer","text":"Diskplot reports the space allocated on disk. Compressed files, sparse files and online-only OneDrive files occupy less than their length. A file with several hard links is counted once per name."}},{"@type":"Question","name":"Does it send data anywhere?","acceptedAnswer":{"@type":"Answer","text":"No. The only network request is to GitHub, to check for a newer version."}},{"@type":"Question","name":"Is there a version for macOS or Linux?","acceptedAnswer":{"@type":"Answer","text":"Yes, as experimental builds on the download page: an AppImage for Linux and a .dmg for macOS on Apple Silicon. They are lightly tested and the scan is slower there. Windows 10 and 11 are the supported systems."}},{"@type":"Question","name":"Is there a version for Android?","acceptedAnswer":{"@type":"Answer","text":"Yes, as an experimental APK on the download page, for Android 7 or newer. It measures the shared storage (photos, downloads, documents) and asks for the All files access permission to do it. A Clean up tab groups what can usually go, and an Apps tab lists the installed apps by size and last use, with the Usage access permission. It is not on Google Play yet."}}]}</script>
   </head>
   <body>
     <header class="top">
@@ -129,6 +129,10 @@
           <div>
             <h3>Duplicate files</h3>
             <p>Files of equal length are compared by content. Runs on request, not during the scan.</p>
+          </div>
+          <div>
+            <h3>Cleanup on Android</h3>
+            <p>Large files, old downloads, installation files, screenshots and messaging media are grouped for review. App caches can be cleared, and installed apps are listed by size and last use.</p>
           </div>
           <div>
             <h3>Size on disk</h3>
@@ -248,7 +252,7 @@
           </details>
           <details>
             <summary>Is there a version for Android?</summary>
-            <p>Yes, as an experimental APK on the download page, for Android 7 or newer. It measures the shared storage (photos, downloads, documents) and asks for the All files access permission to do it. It is not on Google Play yet.</p>
+            <p>Yes, as an experimental APK on the download page, for Android 7 or newer. It measures the shared storage (photos, downloads, documents) and asks for the All files access permission to do it. A Clean up tab groups what can usually go, and an Apps tab lists the installed apps by size and last use, with the Usage access permission. It is not on Google Play yet.</p>
           </details>
         </div>
       </section>
