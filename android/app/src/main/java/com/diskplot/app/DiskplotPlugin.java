@@ -3,6 +3,9 @@ package com.diskplot.app;
 import android.Manifest;
 import android.app.Activity;
 import android.content.ClipData;
+import android.content.ContentResolver;
+import android.app.PendingIntent;
+import android.content.IntentSender;
 import android.content.ClipboardManager;
 import android.content.Intent;
 import android.content.pm.PackageInfo;
@@ -15,6 +18,7 @@ import android.os.StatFs;
 import android.os.storage.StorageManager;
 import android.os.storage.StorageVolume;
 import android.provider.DocumentsContract;
+import android.provider.MediaStore;
 import android.provider.Settings;
 import android.system.Os;
 import android.system.StructStat;
@@ -36,6 +40,8 @@ import com.getcapacitor.annotation.Permission;
 import com.getcapacitor.annotation.PermissionCallback;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.List;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.nio.file.attribute.BasicFileAttributes;
@@ -46,9 +52,11 @@ import java.nio.file.attribute.BasicFileAttributes;
  */
 @CapacitorPlugin(
     name = "Diskplot",
-    permissions = {@Permission(strings = {Manifest.permission.READ_EXTERNAL_STORAGE}, alias = "storage")}
+    permissions = {@Permission(strings = {Manifest.permission.READ_EXTERNAL_STORAGE}, alias = "storage")},
+    requestCodes = {DiskplotPlugin.TRASH_REQUEST}
 )
 public class DiskplotPlugin extends Plugin {
+    static final int TRASH_REQUEST = 7101;
     private Scanner scanner = null;
     private int scans = 0;
     private Duplicates duplicates = null;
@@ -293,6 +301,172 @@ public class DiskplotPlugin extends Plugin {
         call.resolve();
     }
 
+    // Apps ----------------------------------------------------------------
+
+    @PluginMethod
+    public void usageAccess(PluginCall call) {
+        JSObject r = new JSObject();
+        r.put("granted", Apps.usageGranted(getContext()));
+        call.resolve(r);
+    }
+
+    @PluginMethod
+    public void requestUsageAccess(PluginCall call) {
+        Intent i = new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS);
+        // Recent Android versions open the app's own switch when given the package.
+        i.setData(Uri.parse("package:" + getContext().getPackageName()));
+        try {
+            getActivity().startActivity(i);
+        } catch (Exception e) {
+            getActivity().startActivity(new Intent(Settings.ACTION_USAGE_ACCESS_SETTINGS));
+        }
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void apps(PluginCall call) {
+        JSObject r = new JSObject();
+        boolean granted = Apps.usageGranted(getContext());
+        r.put("granted", granted);
+        r.put("apps", granted ? Apps.list(getContext()) : new JSArray());
+        call.resolve(r);
+    }
+
+    @PluginMethod
+    public void uninstall(PluginCall call) {
+        // Android asks the user itself; nothing is removed from here.
+        Intent i = new Intent(Intent.ACTION_DELETE, Uri.parse("package:" + call.getString("pkg", "")));
+        getActivity().startActivity(i);
+        call.resolve();
+    }
+
+    @PluginMethod
+    public void appInfo(PluginCall call) {
+        Intent i = new Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS, Uri.parse("package:" + call.getString("pkg", "")));
+        getActivity().startActivity(i);
+        call.resolve();
+    }
+
+    /** Android's own dialog that clears the cache of every app (Android 11 and later). */
+    @PluginMethod
+    public void clearAppCaches(PluginCall call) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            JSObject r = new JSObject();
+            r.put("done", false);
+            call.resolve(r);
+            return;
+        }
+        startActivityForResult(call, new Intent(StorageManager.ACTION_CLEAR_APP_CACHE), "cachesCleared");
+    }
+
+    @ActivityCallback
+    private void cachesCleared(PluginCall call, ActivityResult result) {
+        if (call == null) return;
+        JSObject r = new JSObject();
+        r.put("done", result.getResultCode() == Activity.RESULT_OK);
+        call.resolve(r);
+    }
+
+    // Trash ---------------------------------------------------------------
+
+    private PluginCall trashCall = null;
+    private JSArray trashDone = null;
+    private List<String> trashWaiting = null;
+
+    private static JSObject result(String path, boolean ok, String error) {
+        JSObject o = new JSObject();
+        o.put("path", path);
+        o.put("ok", ok);
+        if (error != null) o.put("error", error);
+        return o;
+    }
+
+    @PluginMethod
+    public void trash(PluginCall call) {
+        JSArray paths = call.getArray("paths", new JSArray());
+        JSArray out = new JSArray();
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            // No system trash before Android 11.
+            for (int k = 0; k < paths.length(); k++) out.put(result(paths.optString(k), false, "ENOTRASH"));
+            JSObject r = new JSObject();
+            r.put("results", out);
+            call.resolve(r);
+            return;
+        }
+        ContentResolver cr = getContext().getContentResolver();
+        List<Uri> confirm = new ArrayList<>();
+        List<String> waiting = new ArrayList<>();
+        for (int k = 0; k < paths.length(); k++) {
+            String path = paths.optString(k);
+            if (new File(path).isDirectory()) {
+                out.put(result(path, false, "EISDIR"));
+                continue;
+            }
+            Uri uri = Trash.find(cr, path, false);
+            if (uri == null) {
+                Trash.scan(getContext(), path);
+                uri = Trash.find(cr, path, false);
+            }
+            if (uri == null) out.put(result(path, false, "ENOMEDIA"));
+            else if (Trash.mark(cr, uri)) out.put(result(path, true, null));
+            else {
+                confirm.add(uri);
+                waiting.add(path);
+            }
+        }
+        if (confirm.isEmpty()) {
+            JSObject r = new JSObject();
+            r.put("results", out);
+            call.resolve(r);
+            return;
+        }
+        // Android wants the user to confirm: it shows its own dialog.
+        try {
+            PendingIntent pi = MediaStore.createTrashRequest(cr, confirm, true);
+            trashCall = call;
+            trashDone = out;
+            trashWaiting = waiting;
+            getActivity().startIntentSenderForResult(pi.getIntentSender(), TRASH_REQUEST, null, 0, 0, 0);
+        } catch (IntentSender.SendIntentException | RuntimeException e) {
+            for (String path : waiting) out.put(result(path, false, "EDENIED"));
+            JSObject r = new JSObject();
+            r.put("results", out);
+            call.resolve(r);
+        }
+    }
+
+    @Override
+    protected void handleOnActivityResult(int requestCode, int resultCode, Intent data) {
+        super.handleOnActivityResult(requestCode, resultCode, data);
+        if (requestCode != TRASH_REQUEST || trashCall == null) return;
+        for (String path : trashWaiting) out(trashDone, path, resultCode == Activity.RESULT_OK);
+        JSObject r = new JSObject();
+        r.put("results", trashDone);
+        PluginCall call = trashCall;
+        trashCall = null;
+        trashDone = null;
+        trashWaiting = null;
+        call.resolve(r);
+    }
+
+    private static void out(JSArray list, String path, boolean ok) {
+        list.put(result(path, ok, ok ? null : "EDENIED"));
+    }
+
+    @PluginMethod
+    public void erase(PluginCall call) {
+        JSArray paths = call.getArray("paths", new JSArray());
+        JSArray out = new JSArray();
+        for (int k = 0; k < paths.length(); k++) {
+            String path = paths.optString(k);
+            boolean ok = Trash.erase(getContext(), path);
+            out.put(result(path, ok, ok ? null : "EPERM"));
+        }
+        JSObject r = new JSObject();
+        r.put("results", out);
+        call.resolve(r);
+    }
+
     // Items ---------------------------------------------------------------
 
     @PluginMethod
@@ -347,6 +521,7 @@ public class DiskplotPlugin extends Plugin {
         } catch (Exception e) {
             r.put("version", "");
         }
+        r.put("sdk", Build.VERSION.SDK_INT);
         call.resolve(r);
     }
 

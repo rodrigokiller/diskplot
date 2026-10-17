@@ -18,6 +18,7 @@ import type {
   TrashResult,
   UpdateStatus,
   Capabilities,
+  PhoneApi,
 } from "../shared/types";
 
 // Main to renderer events return an unsubscribe function, for effect cleanup.
@@ -30,6 +31,7 @@ function on<A extends unknown[]>(channel: string, cb: (...args: A) => void): () 
 const api = {
   can: { windows: true, trash: true, reveal: true, update: true, watch: true, fileClipboard: true, drop: true, driveTotals: true } as Capabilities,
   compact: false, // a phone-sized screen
+  phone: undefined as PhoneApi | undefined,
   // Desktop systems let any program read the disk; there is nothing to ask for.
   access: async (): Promise<boolean> => true,
   requestAccess: async (): Promise<void> => undefined,

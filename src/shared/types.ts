@@ -121,6 +121,32 @@ export interface WatchBatch {
   flags: Uint8Array;
 }
 
+// An app installed on a phone, with what it takes and when it was last opened.
+export interface AppEntry {
+  pkg: string;
+  label: string;
+  icon: string; // a data URL
+  system: boolean; // part of the system image: it can be disabled, not uninstalled
+  installed: number; // ms
+  lastUsed: number; // ms, 0 when Android has no record
+  appBytes: number;
+  dataBytes: number;
+  cacheBytes: number;
+}
+
+// What only a phone offers. Absent on the desktop.
+export interface PhoneApi {
+  readonly sdk: number; // Android's API level; 30 (Android 11) brought the trash and the cache dialog
+  usageAccess(): Promise<boolean>;
+  requestUsageAccess(): Promise<void>;
+  apps(): Promise<{ granted: boolean; apps: AppEntry[] }>;
+  uninstall(pkg: string): Promise<void>;
+  appInfo(pkg: string): Promise<void>;
+  clearAppCaches(): Promise<boolean>; // false where Android has no such dialog
+  erase(paths: string[]): Promise<TrashResult[]>; // for good, no trash
+  thumb(path: string): string; // a URL the interface can load an image from
+}
+
 export interface WindowInfo {
   id: number;
   title: string;

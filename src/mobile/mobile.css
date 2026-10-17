@@ -507,14 +507,15 @@ body {
   padding: 14px 0;
   row-gap: 12px;
 }
+/* A long volume name wraps rather than being cut beside the button. */
 .app.mobile .drive .letter {
   grid-column: 1;
   grid-row: 1;
   min-width: 0;
   font-size: 17px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.25;
+  white-space: normal;
+  overflow-wrap: anywhere;
 }
 .app.mobile .drive .meter {
   grid-column: 1 / -1;
@@ -547,4 +548,223 @@ body {
 .app.mobile .sofar-row {
   grid-template-columns: 130px 1fr 80px;
   height: 32px;
+}
+
+/* Clean up and Apps ------------------------------------------------------- */
+
+.m-scroll {
+  overflow-y: auto;
+}
+/* A suggestion: what it is, how much, and what to do with it. */
+.m-suggest {
+  display: grid;
+  grid-template-columns: 52px minmax(0, 1fr) auto auto;
+  align-items: center;
+  min-height: 72px;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--line);
+}
+.m-suggest .glyph {
+  justify-self: center;
+  color: var(--t4);
+}
+.m-suggest .m-row-text .meta {
+  white-space: normal;
+  line-height: 1.35;
+}
+.m-suggest .m-row-go {
+  width: 36px;
+}
+.m-suggest .btn {
+  margin: 0 12px;
+}
+.m-suggest.opens:active {
+  background: var(--sunken);
+}
+
+/* The bar over a list: back, title and order, or a summary with filters. */
+.m-subbar {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 56px;
+  padding: 4px 12px 4px 4px;
+  border-bottom: 1px solid var(--line);
+}
+.m-subbar strong {
+  flex: 1;
+  min-width: 0;
+  font-size: 17px;
+  font-weight: 600;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.m-subbar-wrap {
+  flex-wrap: wrap;
+  padding: 10px 12px;
+}
+.m-subbar-wrap .m-lead {
+  flex-basis: 100%;
+  font-size: 15px;
+  color: var(--ink-2);
+}
+.m-subbar-wrap .select {
+  margin-left: auto;
+}
+
+/* Square check boxes in the theme's ink. */
+.m-all input,
+.m-pick input {
+  appearance: none;
+  justify-self: center;
+  flex: none;
+  width: 22px;
+  height: 22px;
+  margin: 0;
+  display: grid;
+  place-items: center;
+  border: 2px solid var(--ink-2);
+  background: none;
+}
+.m-all input:checked,
+.m-pick input:checked {
+  border-color: var(--ink);
+  background: var(--ink);
+}
+.m-all input:checked::after,
+.m-pick input:checked::after {
+  content: "";
+  width: 11px;
+  height: 6px;
+  border-left: 2px solid var(--paper);
+  border-bottom: 2px solid var(--paper);
+  transform: translateY(-1px) rotate(-45deg);
+}
+.m-all input:focus-visible,
+.m-pick input:focus-visible {
+  outline: 2px solid var(--t4);
+  outline-offset: 2px;
+}
+.m-all {
+  flex: none;
+  display: grid;
+  grid-template-columns: 52px auto minmax(0, 1fr);
+  align-items: center;
+  height: 52px;
+  padding-right: 16px;
+  border-bottom: 1px solid var(--line);
+  font-size: 15px;
+  font-weight: 500;
+}
+.m-all .meta {
+  justify-self: end;
+  padding-left: 12px;
+  font-size: 13.5px;
+  font-weight: 400;
+  color: var(--ink-2);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.m-pick {
+  grid-template-columns: 52px 56px minmax(0, 1fr) auto;
+  padding-right: 16px;
+}
+.m-thumb {
+  width: 44px;
+  height: 44px;
+  display: grid;
+  place-items: center;
+  object-fit: cover;
+  background: var(--sunken);
+  color: var(--t4);
+}
+
+/* The action for what is checked, held at the foot of the list. */
+.m-actbar {
+  flex: none;
+  padding: 12px 16px;
+  border-top: 1px solid var(--line-strong);
+  background: var(--paper);
+}
+.app.mobile .m-actbar .btn {
+  width: 100%;
+  height: 48px;
+}
+.m-actsize {
+  margin-left: auto;
+  font-weight: 600;
+}
+.app.mobile .btn.primary:disabled,
+.app.mobile .btn.danger:disabled {
+  background: var(--sunken);
+  border-color: var(--line);
+  color: var(--ink-2);
+}
+
+.m-app {
+  grid-template-columns: 64px minmax(0, 1fr) auto 36px;
+}
+.m-appicon {
+  flex: none;
+  justify-self: center;
+  width: 40px;
+  height: 40px;
+}
+
+/* What the Apps tab needs before it can show anything. */
+.m-ask {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 12px;
+  max-width: 46ch;
+  padding: 32px 20px;
+}
+.m-ask h2 {
+  font-size: 20px;
+  font-weight: 600;
+  line-height: 1.25;
+}
+.m-ask p {
+  font-size: 15px;
+  line-height: 1.45;
+  color: var(--ink-2);
+}
+.m-ask .btn {
+  margin-top: 8px;
+}
+.m-note {
+  margin-top: 12px;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--ink-2);
+}
+
+/* Dialogs: the width of the screen, actions stacked with the main one on top. */
+.app.mobile dialog {
+  width: calc(100vw - 32px);
+}
+.app.mobile dialog h2 {
+  font-size: 20px;
+}
+.app.mobile dialog .body {
+  font-size: 15px;
+  line-height: 1.45;
+}
+.m-dialog-actions {
+  flex-direction: column-reverse;
+  align-items: stretch;
+}
+.app.mobile .m-dialog-actions .btn {
+  justify-content: center;
+  height: 48px;
+}
+/* A finger leaves no hover behind: the strong buttons keep their ink after a tap. */
+.app.mobile .btn.primary:hover:not(:disabled) {
+  background: var(--ink);
+  border-color: var(--ink);
+  color: var(--paper);
 }

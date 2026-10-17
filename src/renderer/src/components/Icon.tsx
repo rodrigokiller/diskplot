@@ -42,6 +42,17 @@ const paths: Record<string, ReactNode> = {
   sortDown: <path d="M4 6h8l-4 5z" fill="currentColor" stroke="none" />,
   sortUp: <path d="M4 10h8L8 5z" fill="currentColor" stroke="none" />,
   open: <path d="M2.75 13.25V2.75h4.5v2h6v8.5zM2.75 7.75h10.5" />,
+  download: <path d="M8 1.75v8M4.5 6.25 8 9.75l3.5-3.5M2.75 11.25v2h10.5v-2" />,
+  box: <path d="M2.75 5.25h10.5v8H2.75zM2.75 5.25l1.5-2.5h7.5l1.5 2.5M6.25 7.75h3.5" />,
+  image: (
+    <>
+      <path d="M2.75 2.75h10.5v10.5H2.75zM2.75 11.25l3.75-3.75 3 3 1.5-1.5 2.25 2.25" />
+      <path d="M9.75 4.75h1.5v1.5h-1.5z" fill="currentColor" stroke="none" />
+    </>
+  ),
+  chat: <path d="M2.75 2.75h10.5v7.5H7.25l-3 3v-3h-1.5z" />,
+  grid: <path d="M2.75 2.75h4v4h-4zM9.25 2.75h4v4h-4zM2.75 9.25h4v4h-4zM9.25 9.25h4v4h-4z" />,
+  layers: <path d="M2.75 8.75h10.5v4.5H2.75zM4.25 5.75h7.5M5.75 2.75h4.5" />,
 };
 
 export type IconName = keyof typeof paths;

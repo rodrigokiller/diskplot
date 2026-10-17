@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
 import { F_DIR } from "../../shared/types";
 import { reduceTable } from "../../shared/reduce";
-import type { DriveInfo, ItemStat, ScanProgress, WatchBatch, ScanTable, SnapshotMeta, UpdateStatus, WindowInfo } from "../../shared/types";
+import type { AppEntry, DriveInfo, ItemStat, ScanProgress, WatchBatch, ScanTable, SnapshotMeta, UpdateStatus, WindowInfo } from "../../shared/types";
 import { Disk } from "./lib/disk";
 import type { Graftable } from "./lib/disk";
 import { NO_FILTER, compare, isFiltering, runFilter, topFiles } from "./lib/analysis";
@@ -16,6 +16,8 @@ import { Treemap } from "./components/Treemap";
 import { TreeView } from "./components/TreeView";
 import { ChangesPane, ClutterPane, DupesPane, ListPane, TypesPane } from "./components/Panels";
 import type { DupState } from "./components/Panels";
+import { AppSheet, AppsPane, CleanPane } from "./components/Phone";
+import type { CleanKey } from "./lib/phone";
 
 type Family = "grid" | "paper";
 type Mode = "system" | "light" | "dark";
@@ -30,7 +32,7 @@ const MOBILE = !can.windows;
 type BarName = (typeof BAR_ALL)[number];
 // Shown in menus and in the shortcut list. The Mac spells the modifier its own way.
 const MOD = navigator.platform.toLowerCase().includes("mac") ? "Cmd" : "Ctrl";
-type Tab = "plan" | "folders" | "tree" | "largest" | "types" | "clutter" | "dupes" | "changes" | "found";
+type Tab = "plan" | "folders" | "clean" | "apps" | "tree" | "largest" | "types" | "clutter" | "dupes" | "changes" | "found";
 // Where a new scan opens: the plan on a phone, the tree beside it on the desktop.
 const HOME: Tab = MOBILE ? "plan" : "tree";
 type Phase = { is: "start" } | { is: "scanning"; root: string } | { is: "failed"; root: string; error: string } | { is: "ready" };
@@ -82,6 +84,12 @@ export function App() {
   const [tab, setTab] = useState<Tab>(HOME);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [searching, setSearching] = useState(false);
+  // Android only: the installed apps, whether usage access is granted, and where the user is.
+  const [apps, setApps] = useState<AppEntry[] | null>(null);
+  const [usage, setUsage] = useState<boolean | null>(null);
+  const [appPkg, setAppPkg] = useState<string | null>(null);
+  const [idleOnly, setIdleOnly] = useState(false);
+  const [cleanOpen, setCleanOpen] = useState<CleanKey | null>(null);
   const [query, setQuery] = useState("");
   const [filter, setFilter] = useState<Filter>(NO_FILTER);
   const [snapshots, setSnapshots] = useState<SnapshotMeta[]>([]);
@@ -197,6 +205,7 @@ export function App() {
     setFresh(new Set());
     setDisk(null);
     setTab(HOME);
+    setCleanOpen(null);
     setPhase({ is: "scanning", root });
     const norm = (p: string): string => p.replace(/[\\/]+$/, "").toLowerCase();
     const drive = drives?.find((d) => norm(d.path) === norm(root));
@@ -537,11 +546,14 @@ export function App() {
   const askTrash = useCallback((ids: number[]) => setTrash(ids), []);
   const askTrashOne = useCallback((id: number) => setTrash([id]), []);
 
-  const confirmTrash = async (): Promise<void> => {
+  // On Android a file can also skip the trash and go for good.
+  const confirmTrash = async (erase = false): Promise<void> => {
     if (!disk || !trash) return;
     const ids = trash;
     setTrash(null);
-    const results = await window.api.trash(ids.map((id) => disk.path(id)));
+    const paths = ids.map((id) => disk.path(id));
+    const phone = window.api.phone;
+    const results = await (erase && phone ? phone.erase(paths) : window.api.trash(paths));
     let failed = 0;
     results.forEach((r, i) => {
       if (!r.ok) {
@@ -921,12 +933,58 @@ export function App() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [ready, nav, disk, zoom, selected, phase, query, t, startScan, pickFolder, zoomTo, toStart, step]);
 
+  // Apps, on Android: read when Clean up or Apps is open, and again on return
+  // from the system screens that change them (uninstall, caches, usage access).
+  const appsJob = useRef({ running: false, again: false });
+  const loadApps = useCallback((): void => {
+    const phone = window.api.phone;
+    const job = appsJob.current;
+    if (!phone) return;
+    if (job.running) {
+      job.again = true;
+      return;
+    }
+    job.running = true;
+    void phone
+      .apps()
+      .then((r) => {
+        setUsage(r.granted);
+        setApps(r.granted ? r.apps : null);
+      })
+      .catch(() => setUsage(false))
+      .finally(() => {
+        job.running = false;
+        if (job.again) {
+          job.again = false;
+          loadApps();
+        }
+      });
+  }, []);
+  const wantApps = window.api.phone !== undefined && (tab === "clean" || tab === "apps");
+  useEffect(() => {
+    if (wantApps && usage === null) loadApps();
+  }, [wantApps, usage, loadApps]);
+  useEffect(() => (wantApps ? window.api.onResume(loadApps) : undefined), [wantApps, loadApps]);
+  // An app uninstalled from its sheet takes the sheet with it.
+  const appSel = appPkg && apps ? apps.find((a) => a.pkg === appPkg) : undefined;
+  useEffect(() => {
+    if (appPkg && apps && !appSel) setAppPkg(null);
+  }, [appPkg, apps, appSel]);
+  const clearCaches = (): void => {
+    void window.api.phone?.clearAppCaches().then((done) => {
+      if (done) flash(t("clean.cacheDone"));
+      loadApps();
+    });
+  };
+
   // Android's back button: the innermost thing first, the app itself last.
   useEffect(() => {
     const back = (): void => {
       const v = view.current;
       if (settingsOpen) return setSettingsOpen(false);
       if (searching) return closeSearch();
+      if (appPkg) return setAppPkg(null);
+      if (tab === "clean" && cleanOpen) return setCleanOpen(null);
       if (v.disk && v.selected >= 0 && v.selected !== v.zoom) return setSelected(-1);
       if (v.menu) return setMenu(null);
       const open = document.querySelector<HTMLDialogElement>("dialog[open]");
@@ -939,7 +997,7 @@ export function App() {
     window.addEventListener("diskplot:back", back);
     return () => window.removeEventListener("diskplot:back", back);
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [phase, live, stopHere, toStart, zoomTo, settingsOpen, searching]);
+  }, [phase, live, stopHere, toStart, zoomTo, settingsOpen, searching, appPkg, tab, cleanOpen]);
 
   // Splitter ---------------------------------------------------------------
 
@@ -1012,6 +1070,38 @@ export function App() {
         <TypesPane {...pane} activeExt={filter.extId} onPick={(extId) => setFilter((f) => ({ ...f, extId }))} />
       )}
       {tab === "clutter" && <ClutterPane {...pane} onTrash={can.trash ? askTrash : undefined} />}
+      {tab === "clean" && (
+        <CleanPane
+          disk={disk}
+          version={version}
+          fmt={fmt}
+          t={t}
+          open={cleanOpen}
+          onOpen={setCleanOpen}
+          apps={apps}
+          usage={usage}
+          onRequestUsage={() => void window.api.phone?.requestUsageAccess()}
+          onClearCaches={clearCaches}
+          onDupes={() => setTab("dupes")}
+          onUnusedApps={() => {
+            setIdleOnly(true);
+            setTab("apps");
+          }}
+          onTrash={askTrash}
+        />
+      )}
+      {tab === "apps" && (
+        <AppsPane
+          apps={apps}
+          usage={usage}
+          fmt={fmt}
+          t={t}
+          idleOnly={idleOnly}
+          onIdleOnly={setIdleOnly}
+          onRequestUsage={() => void window.api.phone?.requestUsageAccess()}
+          onSelect={(a) => setAppPkg(a.pkg)}
+        />
+      )}
       {tab === "dupes" && <DupesPane {...pane} state={dups} setState={setDups} onTrash={can.trash ? askTrash : undefined} />}
       {tab === "changes" && (
         <ChangesPane {...pane} comparison={comparison} snapshots={snapshots} against={against} onAgainst={setAgainst} />
@@ -1105,7 +1195,10 @@ export function App() {
       }
     />
   );
-  const mobileTabs: Tab[] = ["plan", "folders", "largest", "types", "clutter", "dupes", "changes"];
+  // A phone gets its own cleaning and the apps; a narrow window elsewhere keeps the clutter pane.
+  const mobileTabs: Tab[] = window.api.phone
+    ? ["plan", "folders", "clean", "apps", "largest", "types", "dupes", "changes"]
+    : ["plan", "folders", "largest", "types", "clutter", "dupes", "changes"];
   if (filtering) mobileTabs.push("found");
 
   return (
@@ -1499,8 +1592,10 @@ export function App() {
             zoomTo(id);
           }}
           onCopy={(path) => void window.api.copyText(path).then(() => flash(t("copied")))}
+          onTrash={can.trash && ready ? () => setTrash([selected]) : undefined}
         />
       )}
+      {MOBILE && appSel && <AppSheet app={appSel} fmt={fmt} t={t} onClose={() => setAppPkg(null)} />}
       {MOBILE && settingsOpen && (
         <SettingsSheet
           t={t}
@@ -1561,7 +1656,18 @@ export function App() {
         </div>
       )}
 
-      {trash && disk && (
+      {trash && disk && window.api.phone && (
+        <PhoneTrash
+          // A file already in the trash is shown by its own name, without Android's prefix.
+          what={trash.length === 1 ? disk.path(trash[0]).replace(/\/\.trashed-\d+-([^/]*)$/, "/$1") : t("trash.many", { count: trash.length })}
+          bytes={fmt.bytes(trash.reduce((a, id) => a + disk.size(id), 0))}
+          eraseOnly={window.api.phone.sdk < 30 || trash.some((id) => disk.isDir(id) || disk.name(id).startsWith(".trashed-"))}
+          t={t}
+          onCancel={() => setTrash(null)}
+          onConfirm={(erase) => void confirmTrash(erase)}
+        />
+      )}
+      {trash && disk && !window.api.phone && (
         <Dialog onClose={() => setTrash(null)}>
           <header>
             <h2>{t("trash.title")}</h2>
@@ -1782,6 +1888,37 @@ export function App() {
         </Dialog>
       )}
     </div>
+  );
+}
+
+// Android keeps files in its trash from version 11 on, and never folders; past
+// that, or for what is already in the trash, only deleting for good is offered.
+function PhoneTrash(p: { what: string; bytes: string; eraseOnly: boolean; t: T; onCancel: () => void; onConfirm: (erase: boolean) => void }) {
+  const { t } = p;
+  return (
+    <Dialog onClose={p.onCancel}>
+      <header>
+        <h2>{t(p.eraseOnly ? "trash.eraseTitle" : "trash.androidTitle")}</h2>
+      </header>
+      <div className="body">
+        <p className="what">{p.what}</p>
+        <p>{t(p.eraseOnly ? "trash.eraseBody" : "trash.androidBody", { bytes: p.bytes })}</p>
+      </div>
+      <footer className="m-dialog-actions">
+        <button className="btn" onClick={p.onCancel}>
+          {t("act.cancel")}
+        </button>
+        {!p.eraseOnly && (
+          <button className="btn" onClick={() => p.onConfirm(true)}>
+            {t("clean.erase")}
+          </button>
+        )}
+        <button className="btn danger" autoFocus onClick={() => p.onConfirm(p.eraseOnly)}>
+          <Icon name="trash" />
+          {t(p.eraseOnly ? "clean.erase" : "clean.toTrash")}
+        </button>
+      </footer>
+    </Dialog>
   );
 }
 

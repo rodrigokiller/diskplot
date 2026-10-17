@@ -17,13 +17,14 @@ I have used SpaceSniffer for years for its map and WizTree for its tree, usually
 - **Clutter.** `node_modules`, build output, package manager caches, virtual environments, temp folders and browser caches are recognised and totalled.
 - **Find.** Search by name across the whole scan as you type, and narrow by minimum size, age or file type.
 - **Duplicates.** Files of equal length are compared by content, on request.
+- **Clean up and Apps, on Android.** Large files, old downloads, installation files, screenshots, messaging media and Android's trash are grouped for review. App caches can be cleared through Android's own dialog, and the installed apps are listed by size and last use.
 
 The map uses one colour on purpose. Darker means a bigger share of what you are looking at, and that is the only thing the colour says.
 
 ## What it does not do
 
 - It does not read the NTFS master file table. WizTree does, and is faster for it. Diskplot walks folders, which is slower but needs no administrator rights.
-- It does not clean anything by itself. Removing is always your click, with a confirmation, and goes to the Recycle Bin.
+- It does not clean anything by itself. Removing is always your click, with a confirmation, and goes to the Recycle Bin. On Android it goes to Android's trash, or is deleted permanently if you choose that.
 - macOS, Linux and Android builds exist but are experimental and lightly tested. Windows is the supported system. The Android APK is on the download page, not on Google Play yet.
 - A file with several hard links is counted once per name, so folders like `WinSxS` look larger than they are.
 

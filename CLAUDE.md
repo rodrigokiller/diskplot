@@ -24,7 +24,8 @@ Never publish a version unless the user asks for it in the current conversation 
 
 - The same renderer runs inside Capacitor. `src/mobile/bridge.ts` provides `window.api` on Android; `android/app/src/main/java/com/diskplot/app/` holds the native plugin, the scanner and the duplicate finder.
 - The table is built by `src/shared/table.ts` on both platforms. Change it there, not in the scanners.
-- Features Android lacks are switched off through `window.api.can`; check it before offering a desktop-only action.
+- Features Android lacks are switched off through `window.api.can`; check it before offering a desktop-only action. What only a phone has (apps, Android's trash, permanent delete, the cache dialog) is on `window.api.phone`, undefined on the desktop.
+- The Apps tab needs the Usage access permission (`PACKAGE_USAGE_STATS`), granted by the user in system settings. Removing goes through MediaStore's trash on Android 11 and later; folders can only be deleted permanently.
 - Build: `npm run mobile:apk` with `JAVA_HOME` pointing at JDK 23 (Gradle 8.14 does not run on JDK 25) and the SDK in `%LOCALAPPDATA%/Android/Sdk` (written to `android/local.properties`, which git ignores). The APK lands in `android/app/build/outputs/apk/debug/`.
 - An emulator named `diskplot` (Pixel 7, Android 16) exists for testing. Debug builds expose the WebView to Chrome DevTools: `adb forward tcp:9222 localabstract:webview_devtools_remote_<pid>`.
 - Android is not part of the release workflow yet and is not on Google Play.

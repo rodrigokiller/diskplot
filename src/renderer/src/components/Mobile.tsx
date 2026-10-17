@@ -225,7 +225,7 @@ function useDrag(onEnd: (dy: number) => void) {
   return { dy, dragging: start.current !== null, bind };
 }
 
-function Sheet(p: { label: string; modal?: boolean; onClose: () => void; onExpand?: () => void; children: ReactNode; head: ReactNode }) {
+export function Sheet(p: { label: string; modal?: boolean; onClose: () => void; onExpand?: () => void; children: ReactNode; head: ReactNode }) {
   const { dy, dragging, bind } = useDrag((d) => {
     if (d > 70) p.onClose();
     else if (d < -40) p.onExpand?.();
@@ -263,6 +263,7 @@ export function ItemSheet(p: {
   onClose: () => void;
   onOpen: (id: number) => void;
   onCopy: (path: string) => void;
+  onTrash?: () => void;
 }) {
   const { disk, id, fmt, t } = p;
   const [more, setMore] = useState(false);
@@ -312,6 +313,12 @@ export function ItemSheet(p: {
           <Icon name="info" />
           {t("act.details")}
         </button>
+        {p.onTrash && id > 0 && (
+          <button className="btn danger" onClick={p.onTrash}>
+            <Icon name="trash" />
+            {t("act.delete")}
+          </button>
+        )}
       </div>
       {more && (
         <dl className="props">

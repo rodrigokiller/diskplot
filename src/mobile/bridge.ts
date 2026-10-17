@@ -3,7 +3,7 @@
 // answered with a harmless no-op.
 import { Capacitor, registerPlugin } from "@capacitor/core";
 import type { Api } from "../preload";
-import type { DriveInfo, DupCandidate, DupGroup, DupProgress, ItemStat, ScanProgress, ScanTable, SnapshotMeta, SnapshotTable } from "../shared/types";
+import type { AppEntry, DriveInfo, DupCandidate, DupGroup, DupProgress, ItemStat, PhoneApi, ScanProgress, ScanTable, SnapshotMeta, SnapshotTable, TrashResult } from "../shared/types";
 import { finishTable, previewTable } from "../shared/table";
 import type { RawScan, ScanFacts } from "../shared/table";
 import { reduceTable } from "../shared/reduce";
@@ -19,11 +19,19 @@ interface Native {
   cancelScan(): Promise<void>;
   stat(o: { path: string }): Promise<ItemStat>;
   openExternal(o: { url: string }): Promise<void>;
-  info(): Promise<{ version: string }>;
+  info(): Promise<{ version: string; sdk: number }>;
   startDuplicates(o: { candidates: DupCandidate[] }): Promise<void>;
   cancelDuplicates(): Promise<void>;
   exitApp(): Promise<void>;
   copyText(o: { text: string }): Promise<void>;
+  usageAccess(): Promise<{ granted: boolean }>;
+  requestUsageAccess(): Promise<void>;
+  apps(): Promise<{ granted: boolean; apps: AppEntry[] }>;
+  uninstall(o: { pkg: string }): Promise<void>;
+  appInfo(o: { pkg: string }): Promise<void>;
+  clearAppCaches(): Promise<{ done: boolean }>;
+  trash(o: { paths: string[] }): Promise<{ results: TrashResult[] }>;
+  erase(o: { paths: string[] }): Promise<{ results: TrashResult[] }>;
   setBars(o: { color: string; dark: boolean }): Promise<void>;
   addListener(event: string, cb: (data: never) => void): Promise<unknown>;
 }
@@ -207,12 +215,33 @@ const store = (() => {
 // The API -------------------------------------------------------------------
 
 const none = (): (() => void) => () => undefined;
+
+let sdk = 0;
+const phone: PhoneApi = {
+  get sdk() {
+    return sdk;
+  },
+  usageAccess: () => Native.usageAccess().then((r) => r.granted),
+  requestUsageAccess: () => Native.requestUsageAccess(),
+  apps: () => Native.apps(),
+  uninstall: (pkg: string) => Native.uninstall({ pkg }),
+  appInfo: (pkg: string) => Native.appInfo({ pkg }),
+  clearAppCaches: () => Native.clearAppCaches().then((r) => r.done),
+  erase: (paths: string[]) => Native.erase({ paths }).then((r) => r.results),
+  thumb: (path: string) => Capacitor.convertFileSrc(path),
+};
 let version = "";
-void Native.info().then((i) => (version = i.version)).catch(() => undefined);
+void Native.info()
+  .then((i) => {
+    version = i.version;
+    sdk = i.sdk;
+  })
+  .catch(() => undefined);
 
 const api: Api = {
-  can: { windows: false, trash: false, reveal: false, update: false, watch: false, fileClipboard: false, drop: false, driveTotals: false },
+  can: { windows: false, trash: true, reveal: false, update: false, watch: false, fileClipboard: false, drop: false, driveTotals: false },
   compact: window.matchMedia("(max-width: 820px)").matches,
+  phone,
   access: () => Native.access().then((r) => r.granted),
   requestAccess: () => Native.requestAccess(),
   onResume: (cb: () => void) => on("app:resume", cb),
@@ -255,7 +284,8 @@ const api: Api = {
   showInFolder: async () => undefined,
   openPath: async () => "",
   openExternal: (url: string) => Native.openExternal({ url }),
-  trash: async (paths: string[]) => paths.map((path) => ({ path, ok: false, error: "ENOTSUP" })),
+  // Android's own trash: 30 days, then the system deletes.
+  trash: (paths: string[]) => Native.trash({ paths }).then((r) => r.results),
   // The WebView may refuse the web clipboard; the system one always answers.
   copyText: (text: string) => Native.copyText({ text }),
 
